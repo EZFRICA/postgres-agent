@@ -1,102 +1,102 @@
 # PostgreSQL DBA Multi-Agent - Test Data SQL Scripts
 
-Scripts SQL pour alimenter votre base PostgreSQL avec des données de test réalistes qui démontreront toutes les capacités de votre système DBA multi-agent.
+SQL scripts to populate your PostgreSQL database with realistic test data that will demonstrate all the capabilities of your multi-agent DBA system.
 
-## 🎯 Objectif
+## 🎯 Objective
 
-Créer des scénarios de base de données réalistes qui déclencheront et montreront :
+Create realistic database scenarios that will trigger and demonstrate:
 
-- **Problèmes de Performance** : Requêtes lentes, sessions bloquantes, problèmes d'index
-- **Vulnérabilités de Sécurité** : Contrôles d'accès faibles, authentification faible
-- **Problèmes de Schéma** : Tables bloatées, index manquants, anti-patterns de conception
-- **Besoins de Maintenance** : Exigences VACUUM, problèmes de configuration
+- **Performance Issues**: Slow queries, blocking sessions, index problems
+- **Security Vulnerabilities**: Weak access controls, weak authentication
+- **Schema Issues**: Bloated tables, missing indexes, design anti-patterns
+- **Maintenance Needs**: VACUUM requirements, configuration problems
 
-## 🚀 Utilisation Rapide
+## 🚀 Quick Usage
 
 ```bash
-# 1. Connectez-vous à votre base PostgreSQL
+# 1. Connect to your PostgreSQL database
 psql -h localhost -U postgres -d your_database
 
-# 2. Exécutez les scripts dans l'ordre
+# 2. Execute scripts in order
 \i sql-test-data/01-schema/create_schema.sql
 \i sql-test-data/02-data/populate_data.sql
 \i sql-test-data/03-performance-issues/create_performance_issues.sql
 \i sql-test-data/04-security-issues/create_security_issues.sql
 \i sql-test-data/05-maintenance-issues/create_maintenance_issues.sql
 
-# 3. Testez votre agent DBA
+# 3. Test your DBA agent
 # "Why is my database slow?" → Performance Agent
 # "Audit database security" → Security Agent
 # etc.
 
-# 4. Nettoyage après tests
+# 4. Cleanup after tests
 \i sql-test-data/99-cleanup/cleanup_all.sql
 ```
 
-## 📁 Structure des Scripts
+## 📁 Script Structure
 
 ```
 sql-test-data/
-├── 01-schema/           # Création du schéma de base
+├── 01-schema/           # Basic schema creation
 │   └── create_schema.sql
-├── 02-data/             # Population avec des données
+├── 02-data/             # Data population
 │   ├── populate_data.sql
 │   └── insert_large_datasets.sql
-├── 03-performance-issues/  # Création de problèmes de performance
+├── 03-performance-issues/  # Performance problems creation
 │   ├── create_performance_issues.sql
 │   ├── missing_indexes.sql
 │   └── slow_queries.sql
-├── 04-security-issues/     # Création de vulnérabilités de sécurité
+├── 04-security-issues/     # Security vulnerabilities creation
 │   ├── create_security_issues.sql
 │   ├── weak_users.sql
 │   └── poor_permissions.sql
-├── 05-maintenance-issues/  # Création de problèmes de maintenance
+├── 05-maintenance-issues/  # Maintenance problems creation
 │   ├── create_maintenance_issues.sql
 │   ├── bloated_tables.sql
 │   └── config_issues.sql
-└── 99-cleanup/            # Scripts de nettoyage
+└── 99-cleanup/            # Cleanup scripts
     └── cleanup_all.sql
 ```
 
-## 🎲 Scénarios de Test Créés
+## 🎲 Test Scenarios Created
 
-### Performance (Agent Performance)
-- Tables avec millions de lignes sans index appropriés
-- Requêtes avec Cartesian products
-- Sessions bloquantes et deadlocks
-- Cache misses et opérations I/O intensives
+### Performance (Performance Agent)
+- Tables with millions of rows without appropriate indexes
+- Queries with Cartesian products
+- Blocking sessions and deadlocks
+- Cache misses and I/O intensive operations
 
-### Sécurité (Agent Security)
-- Utilisateurs avec privilèges excessifs
-- Méthodes d'authentification faibles
-- Objets publics avec données sensibles
-- Politiques de sécurité au niveau ligne manquantes
+### Security (Security Agent)
+- Users with excessive privileges
+- Weak authentication methods
+- Public objects with sensitive data
+- Missing row-level security policies
 
-### Schéma (Agent Schema)
-- Tables bloatées (>20% de bloat)
-- Index inutilisés et redondants
-- Mauvais choix de types de données
-- Contraintes de clés étrangères manquantes
+### Schema (Schema Agent)
+- Bloated tables (>20% bloat)
+- Unused and redundant indexes
+- Poor data type choices
+- Missing foreign key constraints
 
-### Maintenance (Agent Maintenance)
-- Tables nécessitant VACUUM
-- Statistiques obsolètes
-- Paramètres de configuration sous-optimaux
-- Croissance de base de données simulée
+### Maintenance (Maintenance Agent)
+- Tables requiring VACUUM
+- Obsolete statistics
+- Sub-optimal configuration parameters
+- Simulated database growth
 
-## ⚠️ Notes Importantes
+## ⚠️ Important Notes
 
-- **Utiliser uniquement sur des bases de test** : Ces scripts créent intentionnellement des problèmes
-- **Utilisation des ressources** : Les grandes datasets consommeront de l'espace disque et mémoire
-- **Sauvegarde** : Considérez sauvegarder votre base avant les tests extensifs
-- **Nettoyage** : Utilisez les scripts de cleanup après les tests
+- **Use only on test databases**: These scripts intentionally create problems
+- **Resource usage**: Large datasets will consume disk space and memory
+- **Backup**: Consider backing up your database before extensive testing
+- **Cleanup**: Use cleanup scripts after testing
 
 ## 🧪 Validation
 
-Après l'exécution des scripts, votre système PostgreSQL DBA Multi-Agent devrait pouvoir :
+After executing the scripts, your PostgreSQL DBA Multi-Agent system should be able to:
 
-1. **Détecter les problèmes de performance** et suggérer des optimisations
-2. **Trouver les vulnérabilités de sécurité** et recommander des corrections
-3. **Analyser les problèmes de schéma** et proposer des améliorations
-4. **Planifier la maintenance** et optimiser la configuration
-5. **Gérer les problèmes complexes** avec une analyse coordonnée multi-domaine
+1. **Detect performance issues** and suggest optimizations
+2. **Find security vulnerabilities** and recommend fixes
+3. **Analyze schema issues** and propose improvements
+4. **Plan maintenance** and optimize configuration
+5. **Handle complex problems** with coordinated multi-domain analysis

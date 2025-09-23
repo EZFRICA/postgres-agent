@@ -1,28 +1,28 @@
 -- ============================================================================
 -- PostgreSQL DBA Multi-Agent - Security Issues Creation
 -- ============================================================================
--- Ce script crée intentionnellement des vulnérabilités de sécurité pour tester
--- les capacités du Security Agent
+-- This script intentionally creates security vulnerabilities to test
+-- the capabilities of the Security Agent
 --
--- MODES D'UTILISATION:
--- 1. AGENT DBA (privilèges limités): Exécute ce script tel quel
---    - Crée des tables et vues avec des problèmes de sécurité
---    - Documente les problèmes que l'agent peut détecter
---    - Les sections nécessitant des privilèges admin sont commentées
+-- USAGE MODES:
+-- 1. DBA AGENT (limited privileges): Execute this script as is
+--    - Creates tables and views with security problems
+--    - Documents problems that the agent can detect
+--    - Sections requiring admin privileges are commented
 --
--- 2. ADMINISTRATEUR (privilèges SUPERUSER): Décommente les sections admin
---    - Peut créer de vrais utilisateurs avec des privilèges problématiques
---    - Peut appliquer des permissions dangereuses
---    - Crée un environnement de test plus complet
+-- 2. ADMINISTRATOR (SUPERUSER privileges): Uncomment admin sections
+--    - Can create real users with problematic privileges
+--    - Can apply dangerous permissions
+--    - Creates a more complete test environment
 --
--- IMPORTANT: Les sections commentées nécessitent des privilèges SUPERUSER
+-- IMPORTANT: Commented sections require SUPERUSER privileges
 -- ============================================================================
 
 -- ============================================================================
--- 1. DOCUMENTER LES PROBLÈMES D'UTILISATEURS (au lieu de les créer)
+-- 1. DOCUMENT USER PROBLEMS (instead of creating them)
 -- ============================================================================
 
--- Créer une table pour documenter les problèmes de sécurité des utilisateurs
+-- Create a table to document user security issues
 CREATE TABLE IF NOT EXISTS test_security_schema.user_security_issues (
     issue_type VARCHAR(50),
     description TEXT,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS test_security_schema.user_security_issues (
     recommendation TEXT
 );
 
--- Documenter les types de problèmes que l'agent devrait détecter
+-- Document the types of problems the agent should detect
 INSERT INTO test_security_schema.user_security_issues VALUES
 ('superuser_privileges', 'Users with unnecessary SUPERUSER privileges', 'CRITICAL', 'Multiple non-admin users have SUPERUSER', 'Remove SUPERUSER from non-admin accounts'),
 ('createdb_privileges', 'Users with CREATEDB privileges who dont need them', 'HIGH', 'Service accounts have CREATEDB', 'Revoke CREATEDB from service accounts'),
@@ -41,41 +41,41 @@ INSERT INTO test_security_schema.user_security_issues VALUES
 ('weak_passwords', 'Users with weak passwords', 'HIGH', 'Passwords like 123, password, etc.', 'Enforce strong password policy');
 
 -- ============================================================================
--- 1bis. CRÉER DES UTILISATEURS AVEC DES PRIVILÈGES EXCESSIFS (COMMENTÉ)
+-- 1bis. CREATE USERS WITH EXCESSIVE PRIVILEGES (COMMENTED)
 -- ============================================================================
--- ATTENTION: Ces commandes nécessitent des privilèges SUPERUSER
--- Décommentez et exécutez en tant qu'administrateur si vous voulez créer de vrais utilisateurs de test
+-- WARNING: These commands require SUPERUSER privileges
+-- Uncomment and execute as administrator if you want to create real test users
 
--- -- Utilisateur avec des privilèges superuser (risque élevé)
+-- -- User with superuser privileges (high risk)
 -- CREATE ROLE test_superuser WITH LOGIN SUPERUSER PASSWORD 'weak_password_123';
 -- COMMENT ON ROLE test_superuser IS 'Test user with excessive superuser privileges';
 
--- -- Utilisateur avec des privilèges de création de base de données
+-- -- User with database creation privileges
 -- CREATE ROLE test_createdb WITH LOGIN CREATEDB PASSWORD 'another_weak_password';
 -- COMMENT ON ROLE test_createdb IS 'Test user with database creation privileges';
 
--- -- Utilisateur avec des privilèges de création de rôles
+-- -- User with role creation privileges
 -- CREATE ROLE test_createrole WITH LOGIN CREATEROLE PASSWORD 'password123';
 -- COMMENT ON ROLE test_createrole IS 'Test user with role creation privileges';
 
--- -- Utilisateur de service partagé (mauvaise pratique)
+-- -- Shared service user (bad practice)
 -- CREATE ROLE shared_service_account WITH LOGIN PASSWORD 'shared_secret';
 -- COMMENT ON ROLE shared_service_account IS 'Shared service account (security risk)';
 
--- -- Utilisateur sans mot de passe (risque critique)
+-- -- User without password (critical risk)
 -- CREATE ROLE test_no_password WITH LOGIN;
 -- COMMENT ON ROLE test_no_password IS 'User without password - critical security risk';
 
--- -- Utilisateur avec mot de passe faible
+-- -- User with weak password
 -- CREATE ROLE test_weak_password WITH LOGIN PASSWORD '123';
 -- COMMENT ON ROLE test_weak_password IS 'User with very weak password';
 
 -- ============================================================================
--- 2. CRÉER DES PROBLÈMES DE PERMISSIONS (ce que l'agent peut faire)
+-- 2. CREATE PERMISSION PROBLEMS (what the agent can do)
 -- ============================================================================
 
--- L'agent peut créer des tables avec des permissions problématiques dans les schémas de test
--- Créer une table avec des données sensibles exposées (risque de sécurité)
+-- The agent can create tables with problematic permissions in test schemas
+-- Create a table with exposed sensitive data (security risk)
 CREATE TABLE IF NOT EXISTS test_security_schema.exposed_user_data (
     user_id INTEGER,
     username VARCHAR(50),
@@ -86,13 +86,13 @@ CREATE TABLE IF NOT EXISTS test_security_schema.exposed_user_data (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insérer des données simulées
+-- Insert simulated data
 INSERT INTO test_security_schema.exposed_user_data (user_id, username, email_domain, last_login_ip, failed_login_count, account_status) VALUES
 (1, 'admin_user', 'company.com', '192.168.1.100', 0, 'active'),
 (2, 'service_account', 'internal.local', '10.0.0.50', 5, 'locked'),
 (3, 'test_user', 'external.com', '203.0.113.45', 12, 'suspicious');
 
--- Créer une vue qui expose trop d'informations
+-- Create a view that exposes too much information
 CREATE OR REPLACE VIEW test_security_schema.user_login_summary AS
 SELECT 
     user_id,
@@ -108,41 +108,41 @@ SELECT
 FROM test_security_schema.exposed_user_data;
 
 -- ============================================================================
--- 2bis. PERMISSIONS EXCESSIVES (COMMENTÉ - nécessite privilèges admin)
+-- 2bis. EXCESSIVE PERMISSIONS (COMMENTED - requires admin privileges)
 -- ============================================================================
--- Ces commandes nécessitent des privilèges administrateur pour GRANT sur les schémas existants
+-- These commands require administrator privileges to GRANT on existing schemas
 
--- -- Accorder ALL PRIVILEGES sur des schémas critiques
+-- -- Grant ALL PRIVILEGES on critical schemas
 -- GRANT ALL PRIVILEGES ON SCHEMA ecommerce_schema TO test_createdb;
 -- GRANT ALL PRIVILEGES ON SCHEMA analytics_schema TO test_createrole;
 -- GRANT ALL PRIVILEGES ON SCHEMA audit_schema TO shared_service_account;
 
--- -- Permissions publiques sur des tables sensibles (très risqué)
+-- -- Public permissions on sensitive tables (very risky)
 -- GRANT SELECT ON ecommerce_schema.users TO PUBLIC;
 -- GRANT SELECT ON audit_schema.login_logs TO PUBLIC;
 
 -- ============================================================================
--- 3. CRÉER DES OBJETS DANS LE SCHÉMA PUBLIC (risque de sécurité)
+-- 3. CREATE OBJECTS IN PUBLIC SCHEMA (security risk)
 -- ============================================================================
 
--- Table avec des données sensibles exposées  
+-- Table with exposed sensitive data  
 CREATE TABLE test_security_schema.sensitive_data (
     id SERIAL PRIMARY KEY,
     user_id INTEGER,
-    credit_card_number VARCHAR(20), -- Données sensibles non chiffrées
-    ssn VARCHAR(11),                -- Numéro de sécurité sociale
-    password_backup TEXT,           -- Mots de passe en clair
-    api_secret_key TEXT,            -- Clés API en clair
+    credit_card_number VARCHAR(20), -- Unencrypted sensitive data
+    ssn VARCHAR(11),                -- Social security number
+    password_backup TEXT,           -- Passwords in plain text
+    api_secret_key TEXT,            -- API keys in plain text
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insérer des données sensibles factices
+-- Insert fake sensitive data
 INSERT INTO test_security_schema.sensitive_data (user_id, credit_card_number, ssn, password_backup, api_secret_key) VALUES
 (1, '4532-1234-5678-9012', '123-45-6789', 'user_password_123', 'sk_test_abc123def456'),
 (2, '5678-9012-3456-7890', '987-65-4321', 'another_password', 'ak_prod_xyz789uvw012'),
 (3, '9012-3456-7890-1234', '555-66-7777', 'weak_pwd', 'secret_key_qwerty123');
 
--- Fonction dangereuse accessible à tous
+-- Dangerous function accessible to everyone
 CREATE OR REPLACE FUNCTION test_security_schema.get_user_password(username TEXT)
 RETURNS TEXT AS $$
 BEGIN
@@ -152,45 +152,45 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT EXECUTE
+-- COMMENTED: Requires privileges to GRANT EXECUTE
 -- GRANT EXECUTE ON FUNCTION public.get_user_password(TEXT) TO PUBLIC;
 
 -- ============================================================================
--- 4. CRÉER DES VUES AVEC DES FUITES DE DONNÉES
+-- 4. CREATE VIEWS WITH DATA LEAKS
 -- ============================================================================
 
--- Vue qui expose des données sensibles
+-- View that exposes sensitive data
 CREATE VIEW test_security_schema.user_details AS
 SELECT 
     u.user_id,
     u.username,
     u.email,
-    u.password_hash,  -- Hash de mot de passe exposé
+    u.password_hash,  -- Exposed password hash
     u.phone,
     sd.credit_card_number,
     sd.ssn
 FROM ecommerce_schema.users u
 LEFT JOIN test_security_schema.sensitive_data sd ON u.user_id = sd.user_id;
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT SELECT
+-- COMMENTED: Requires privileges to GRANT SELECT
 -- GRANT SELECT ON public.user_details TO PUBLIC;
 
 -- ============================================================================
--- 5. CONFIGURER DES MÉTHODES D'AUTHENTIFICATION FAIBLES
+-- 5. CONFIGURE WEAK AUTHENTICATION METHODS
 -- ============================================================================
 
--- Note: Ces configurations nécessitent la modification de pg_hba.conf
--- Voici ce que l'agent de sécurité devrait détecter comme problématique:
+-- Note: These configurations require modification of pg_hba.conf
+-- Here is what the security agent should detect as problematic:
 
 /*
-Configurations problématiques à détecter dans pg_hba.conf:
-- host all all 0.0.0.0/0 trust          # Trust sans authentification
-- host all all 0.0.0.0/0 md5            # MD5 faible au lieu de scram-sha-256
-- local all all trust                    # Connexions locales sans mot de passe
-- host all postgres 0.0.0.0/0 password  # Mot de passe en clair
+Problematic configurations to detect in pg_hba.conf:
+- host all all 0.0.0.0/0 trust          # Trust without authentication
+- host all all 0.0.0.0/0 md5            # Weak MD5 instead of scram-sha-256
+- local all all trust                    # Local connections without password
+- host all postgres 0.0.0.0/0 password  # Plain text password
 */
 
--- Créer des entrées dans la base pour documenter les problèmes de configuration
+-- Create database entries to document configuration problems
 CREATE TABLE IF NOT EXISTS test_security_schema.authentication_issues (
     issue_type VARCHAR(50),
     description TEXT,
@@ -206,25 +206,25 @@ INSERT INTO test_security_schema.authentication_issues VALUES
 ('postgres_remote_access', 'Postgres superuser allowed remote connections', 'CRITICAL', 'Restrict postgres user to local connections only');
 
 -- ============================================================================
--- 6. CRÉER DES RÔLES AVEC INHERITANCE PROBLÉMATIQUE
+-- 6. CREATE ROLES WITH PROBLEMATIC INHERITANCE
 -- ============================================================================
 
--- COMMENTÉ: Création de rôles nécessite des privilèges administrateur
+-- COMMENTED: Role creation requires administrator privileges
 -- CREATE ROLE dangerous_parent_role WITH CREATEDB CREATEROLE;
 -- CREATE ROLE child_role WITH LOGIN PASSWORD 'child_pass';
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT des rôles
+-- COMMENTED: Requires privileges to GRANT roles
 -- GRANT dangerous_parent_role TO child_role;
 
--- COMMENTÉ: Ces commandes nécessitent des privilèges pour créer des rôles
+-- COMMENTED: These commands require privileges to create roles
 -- CREATE ROLE escalation_risk WITH LOGIN PASSWORD 'escalate_me';
 -- GRANT test_createrole TO escalation_risk; -- Peut créer d'autres rôles
 
 -- ============================================================================
--- 7. CRÉER DES PROBLÈMES DE ROW LEVEL SECURITY
+-- 7. CREATE ROW LEVEL SECURITY PROBLEMS
 -- ============================================================================
 
--- Table sensible sans Row Level Security activée
+-- Sensitive table without Row Level Security enabled
 CREATE TABLE test_security_schema.multi_tenant_data (
     id SERIAL PRIMARY KEY,
     tenant_id INTEGER NOT NULL,
@@ -234,7 +234,7 @@ CREATE TABLE test_security_schema.multi_tenant_data (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insérer des données multi-tenant
+-- Insert multi-tenant data
 INSERT INTO test_security_schema.multi_tenant_data (tenant_id, user_id, sensitive_info, financial_data) VALUES
 (1, 101, 'Tenant 1 secret data', 50000.00),
 (1, 102, 'More tenant 1 data', 75000.00),
@@ -242,27 +242,27 @@ INSERT INTO test_security_schema.multi_tenant_data (tenant_id, user_id, sensitiv
 (2, 202, 'Tenant 2 financial details', 120000.00),
 (3, 301, 'Tenant 3 sensitive content', 95000.00);
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT SELECT
+-- COMMENTED: Requires privileges to GRANT SELECT
 -- GRANT SELECT ON test_security_schema.multi_tenant_data TO test_weak_password;
 
 -- ============================================================================
--- 8. CRÉER DES FONCTIONS SECURITY DEFINER DANGEREUSES
+-- 8. CREATE DANGEROUS SECURITY DEFINER FUNCTIONS
 -- ============================================================================
 
--- Fonction avec SECURITY DEFINER qui peut être exploitée
+-- Function with SECURITY DEFINER that can be exploited
 CREATE OR REPLACE FUNCTION test_security_schema.admin_function(query TEXT)
 RETURNS TEXT AS $$
 BEGIN
-    -- Fonction dangereuse qui exécute du SQL dynamique
+    -- Dangerous function that executes dynamic SQL
     EXECUTE query;
     RETURN 'Query executed';
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT EXECUTE
+-- COMMENTED: Requires privileges to GRANT EXECUTE
 -- GRANT EXECUTE ON FUNCTION test_security_schema.admin_function(TEXT) TO test_weak_password;
 
--- Autre fonction problématique
+-- Another problematic function
 CREATE OR REPLACE FUNCTION test_security_schema.get_any_user_data(target_user_id INTEGER)
 RETURNS TABLE(username TEXT, email TEXT, password_hash TEXT) AS $$
 BEGIN
@@ -273,14 +273,14 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- COMMENTÉ: Nécessite des privilèges pour GRANT EXECUTE
+-- COMMENTED: Requires privileges to GRANT EXECUTE
 -- GRANT EXECUTE ON FUNCTION test_security_schema.get_any_user_data(INTEGER) TO PUBLIC;
 
 -- ============================================================================
--- 9. CRÉER DES LOGS D'AUDIT INSUFFISANTS
+-- 9. CREATE INSUFFICIENT AUDIT LOGS
 -- ============================================================================
 
--- Désactiver la journalisation pour des opérations critiques (simulé)
+-- Disable logging for critical operations (simulated)
 CREATE TABLE test_security_schema.audit_schema_gaps (
     gap_type VARCHAR(50),
     description TEXT,
@@ -295,11 +295,11 @@ INSERT INTO test_security_schema.audit_schema_gaps VALUES
 ('log_retention_short', 'Audit logs are retained for less than 1 year', 'Insufficient for compliance requirements');
 
 -- ============================================================================
--- 10. CRÉER DES EXTENSIONS NON SÉCURISÉES
+-- 10. CREATE UNSECURED EXTENSIONS
 -- ============================================================================
 
--- Note: Ces extensions nécessitent des privilèges superuser
--- Documenter les problèmes potentiels
+-- Note: These extensions require superuser privileges
+-- Document potential problems
 CREATE TABLE test_security_schema.extension_risks (
     extension_name VARCHAR(50),
     risk_description TEXT,
@@ -313,30 +313,30 @@ INSERT INTO test_security_schema.extension_risks VALUES
 ('plpython', 'Allows execution of Python code, potential system access', 'Remove if not needed, sandbox execution');
 
 -- ============================================================================
--- 11. CRÉER DES PROBLÈMES DE CHIFFREMENT
+-- 11. CREATE ENCRYPTION PROBLEMS
 -- ============================================================================
 
--- Table avec des données sensibles non chiffrées
+-- Table with unencrypted sensitive data
 CREATE TABLE test_security_schema.unencrypted_sensitive (
     id SERIAL PRIMARY KEY,
     customer_id INTEGER,
-    credit_card_number VARCHAR(20),    -- Devrait être chiffré
-    bank_account VARCHAR(20),          -- Devrait être chiffré
-    social_security VARCHAR(11),       -- Devrait être chiffré
-    medical_record_number VARCHAR(20), -- Devrait être chiffré
-    notes TEXT                         -- Pourrait contenir des infos sensibles
+    credit_card_number VARCHAR(20),    -- Should be encrypted
+    bank_account VARCHAR(20),          -- Should be encrypted
+    social_security VARCHAR(11),       -- Should be encrypted
+    medical_record_number VARCHAR(20), -- Should be encrypted
+    notes TEXT                         -- Could contain sensitive info
 );
 
--- Insérer des données non chiffrées
+-- Insert unencrypted data
 INSERT INTO test_security_schema.unencrypted_sensitive VALUES
 (1, 1001, '4532123456789012', '123456789', '123-45-6789', 'MR-2023-001', 'Patient has diabetes'),
 (2, 1002, '5678901234567890', '987654321', '987-65-4321', 'MR-2023-002', 'Allergy to penicillin');
 
 -- ============================================================================
--- RÉCAPITULATIF ET VALIDATION DES PROBLÈMES DE SÉCURITÉ
+-- SUMMARY AND VALIDATION OF SECURITY PROBLEMS
 -- ============================================================================
 
--- Créer une vue résumé pour l'agent de sécurité
+-- Create a summary view for the security agent
 CREATE VIEW test_security_schema.security_issues_summary AS
 SELECT 
     'Excessive Privileges' as issue_category,
@@ -375,7 +375,7 @@ WHERE t.table_schema = 'test_security_schema'
   AND t.table_name LIKE '%tenant%'
   AND (c.relrowsecurity IS NULL OR NOT c.relrowsecurity);
 
--- Afficher un résumé des problèmes de sécurité créés
+-- Display a summary of created security problems
 DO $$
 DECLARE
     risky_users_count INTEGER;
@@ -418,9 +418,9 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- NETTOYAGE DES OBJETS DE SÉCURITÉ (COMMENTÉ POUR LES TESTS)
+-- CLEANUP OF SECURITY OBJECTS (COMMENTED FOR TESTS)
 -- ============================================================================
--- RAPPEL: Décommenter ces lignes à la fin des tests pour nettoyer les objets
+-- REMINDER: Uncomment these lines at the end of tests to clean up objects
 -- DROP VIEW IF EXISTS test_security_schema.user_login_summary;
 -- DROP VIEW IF EXISTS test_security_schema.user_details;
 -- DROP VIEW IF EXISTS test_security_schema.security_issues_summary;

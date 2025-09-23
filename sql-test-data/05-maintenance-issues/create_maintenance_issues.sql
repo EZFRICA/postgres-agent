@@ -1,20 +1,20 @@
 -- ============================================================================
 -- PostgreSQL DBA Multi-Agent - Maintenance Issues Creation
 -- ============================================================================
--- Ce script crée intentionnellement des problèmes de maintenance pour tester
--- les capacités du Maintenance Agent
+-- This script intentionally creates maintenance issues to test
+-- the capabilities of the Maintenance Agent
 -- ============================================================================
 
 -- ============================================================================
--- 1. CRÉER DES TABLES NÉCESSITANT VACUUM ET ANALYZE
+-- 1. CREATE TABLES REQUIRING VACUUM AND ANALYZE
 -- ============================================================================
 
--- Simuler de nombreuses UPDATE et DELETE pour créer du bloat
+-- Simulate many UPDATEs and DELETEs to create bloat
 UPDATE ecommerce_schema.products SET price = price * 1.01 WHERE product_id % 2 = 0;
 UPDATE ecommerce_schema.products SET price = price * 0.99 WHERE product_id % 2 = 1;
 UPDATE ecommerce_schema.users SET updated_at = NOW() WHERE user_id % 3 = 0;
 
--- Créer du bloat avec des DELETE et INSERT répétés
+-- Create bloat with repeated DELETEs and INSERTs
 DELETE FROM test_performance_schema.duplicate_data WHERE id % 5 = 0;
 INSERT INTO test_performance_schema.duplicate_data (duplicate_field, search_field, random_data)
 SELECT 
@@ -24,25 +24,25 @@ SELECT
 FROM generate_series(1, 5000) i;
 
 -- ============================================================================
--- 2. CRÉER DES INDEX NON UTILISÉS ET REDONDANTS
+-- 2. CREATE UNUSED AND REDUNDANT INDEXES
 -- ============================================================================
 
--- Index redondants (couvrent les mêmes colonnes)
+-- Redundant indexes (cover the same columns)
 CREATE INDEX idx_redundant_users_email_1 ON ecommerce_schema.users(email);
 CREATE INDEX idx_redundant_users_email_2 ON ecommerce_schema.users(email, username);
 CREATE INDEX idx_redundant_orders_user_date ON ecommerce_schema.orders(user_id, order_date);
 CREATE INDEX idx_redundant_orders_date_user ON ecommerce_schema.orders(order_date, user_id);
 
--- Index inutilisés (ne correspondent à aucun pattern de requête)
+-- Unused indexes (do not match any query pattern)
 CREATE INDEX idx_unused_products_weight ON ecommerce_schema.products(weight);
 CREATE INDEX idx_unused_reviews_title ON ecommerce_schema.reviews(title);
 CREATE INDEX idx_unused_sessions_ip ON analytics_schema.user_sessions(ip_address);
 
 -- ============================================================================
--- 3. CRÉER DES PROBLÈMES DE STATISTIQUES
+-- 3. CREATE STATISTICS PROBLEMS
 -- ============================================================================
 
--- Modifier beaucoup de données sans ANALYZE
+-- Modify a lot of data without ANALYZE
 INSERT INTO analytics_schema.events (session_id, user_id, event_type, event_data, timestamp)
 SELECT 
     (SELECT session_id FROM analytics_schema.user_sessions ORDER BY RANDOM() LIMIT 1),
@@ -52,13 +52,13 @@ SELECT
     NOW() - (RANDOM() * INTERVAL '30 days')
 FROM generate_series(1, 10000);
 
--- Ne pas exécuter ANALYZE pour laisser les statistiques obsolètes
+-- Do not execute ANALYZE to leave statistics obsolete
 
 -- ============================================================================
--- 4. CRÉER DES PROBLÈMES DE CONFIGURATION
+-- 4. CREATE CONFIGURATION PROBLEMS
 -- ============================================================================
 
--- Créer une table de documentation des problèmes de configuration
+-- Create a table documenting configuration problems
 CREATE TABLE IF NOT EXISTS test_performance_schema.maintenance_config_issues (
     issue_type VARCHAR(50),
     current_setting TEXT,
@@ -78,26 +78,26 @@ INSERT INTO test_performance_schema.maintenance_config_issues VALUES
 ('random_page_cost', '4.0', '1.1', 'Cost model inappropriate for SSD storage', 'MEDIUM');
 
 -- ============================================================================
--- 5. CRÉER DES PROBLÈMES DE TAILLE DE BASE DE DONNÉES
+-- 5. CREATE DATABASE SIZE PROBLEMS
 -- ============================================================================
 
--- Créer une table qui grandit rapidement
+-- Create a table that grows quickly
 CREATE TABLE IF NOT EXISTS test_performance_schema.growing_table (
     id BIGSERIAL PRIMARY KEY,
     data_payload TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Insérer beaucoup de données pour simuler une croissance rapide
+-- Insert a lot of data to simulate rapid growth
 INSERT INTO test_performance_schema.growing_table (data_payload)
 SELECT repeat('GROWTH_SIMULATION_DATA_', 1000)
 FROM generate_series(1, 1000);
 
 -- ============================================================================
--- 6. CRÉER DES CONNEXIONS INACTIVES ET PROBLÈMES DE SESSIONS
+-- 6. CREATE IDLE CONNECTIONS AND SESSION PROBLEMS
 -- ============================================================================
 
--- Simuler des problèmes de connexions (documenté)
+-- Simulate connection problems (documented)
 CREATE TABLE IF NOT EXISTS test_performance_schema.connection_issues (
     issue_type VARCHAR(50),
     description TEXT,
@@ -111,10 +111,10 @@ INSERT INTO test_performance_schema.connection_issues VALUES
 ('too_many_prepared_statements', 'Excessive prepared statements consuming memory', 'Review prepared statement lifecycle');
 
 -- ============================================================================
--- 7. CRÉER DES PROBLÈMES DE LOG ET AUDIT
+-- 7. CREATE LOG AND AUDIT PROBLEMS
 -- ============================================================================
 
--- Simuler des logs volumineux
+-- Simulate large logs
 CREATE TABLE IF NOT EXISTS test_performance_schema.log_growth_simulation (
     log_entry_id BIGSERIAL PRIMARY KEY,
     log_level VARCHAR(10),
@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS test_performance_schema.log_growth_simulation (
     log_timestamp TIMESTAMP DEFAULT NOW()
 );
 
--- Insérer des entrées de log volumineuses
+-- Insert large log entries
 INSERT INTO test_performance_schema.log_growth_simulation (log_level, log_message)
 SELECT 
     CASE (RANDOM() * 4)::INTEGER
@@ -135,10 +135,10 @@ SELECT
 FROM generate_series(1, 5000) i;
 
 -- ============================================================================
--- 8. CRÉER DES PROBLÈMES DE SAUVEGARDE ET ARCHIVAGE
+-- 8. CREATE BACKUP AND ARCHIVING PROBLEMS
 -- ============================================================================
 
--- Table de documentation des problèmes de sauvegarde
+-- Table documenting backup problems
 CREATE TABLE IF NOT EXISTS test_performance_schema.backup_maintenance_issues (
     backup_type VARCHAR(50),
     issue_description TEXT,
@@ -154,10 +154,10 @@ INSERT INTO test_performance_schema.backup_maintenance_issues VALUES
 ('point_in_time_recovery', 'PITR testing not performed regularly', 'HIGH', 'Schedule regular PITR recovery tests');
 
 -- ============================================================================
--- 9. CRÉER DES PROBLÈMES DE RÉPLICATION (si applicable)
+-- 9. CREATE REPLICATION PROBLEMS (if applicable)
 -- ============================================================================
 
--- Table de documentation des problèmes de réplication
+-- Table documenting replication problems
 CREATE TABLE IF NOT EXISTS test_performance_schema.replication_maintenance_issues (
     replication_aspect VARCHAR(50),
     issue_description TEXT,
@@ -172,10 +172,10 @@ INSERT INTO test_performance_schema.replication_maintenance_issues VALUES
 ('streaming_replication', 'Streaming replication connection issues', 'SELECT state FROM pg_stat_replication;', 'Check network connectivity and authentication');
 
 -- ============================================================================
--- 10. CRÉER DES VUES DE MONITORING POUR L'AGENT
+-- 10. CREATE MONITORING VIEWS FOR THE AGENT
 -- ============================================================================
 
--- Vue pour détecter les tables nécessitant VACUUM
+-- View to detect tables requiring VACUUM
 CREATE OR REPLACE VIEW test_performance_schema.tables_needing_vacuum AS
 SELECT 
     schemaname,
@@ -193,7 +193,7 @@ FROM pg_stat_user_tables
 WHERE n_dead_tup > 1000 
    OR (n_live_tup > 0 AND (n_dead_tup::FLOAT / n_live_tup::FLOAT) > 0.1);
 
--- Vue pour détecter les tables nécessitant ANALYZE
+-- View to detect tables requiring ANALYZE
 CREATE OR REPLACE VIEW test_performance_schema.tables_needing_analyze AS
 SELECT 
     schemaname,
@@ -206,7 +206,7 @@ WHERE n_mod_since_analyze > 1000
    OR last_analyze IS NULL
    OR last_autoanalyze IS NULL;
 
--- Vue pour détecter les index inutilisés
+-- View to detect unused indexes
 CREATE OR REPLACE VIEW test_performance_schema.unused_indexes AS
 SELECT 
     schemaname,
@@ -218,7 +218,7 @@ FROM pg_stat_user_indexes
 WHERE idx_scan < 10
   AND pg_relation_size(indexrelid) > 1024 * 1024; -- Plus de 1MB
 
--- Vue pour surveiller la croissance de la base de données
+-- View to monitor database growth
 CREATE OR REPLACE VIEW test_performance_schema.database_size_monitoring AS
 SELECT 
     datname,
@@ -228,10 +228,10 @@ FROM pg_database
 WHERE datname = current_database();
 
 -- ============================================================================
--- RÉCAPITULATIF ET VALIDATION DES PROBLÈMES DE MAINTENANCE
+-- SUMMARY AND VALIDATION OF MAINTENANCE PROBLEMS
 -- ============================================================================
 
--- Afficher un résumé des problèmes de maintenance créés
+-- Display a summary of created maintenance problems
 DO $$
 DECLARE
     tables_needing_vacuum INTEGER;
@@ -239,13 +239,13 @@ DECLARE
     db_size TEXT;
     config_issues_count INTEGER;
 BEGIN
-    -- Compter les tables nécessitant VACUUM (estimation basée sur les modifications)
+    -- Count tables requiring VACUUM (estimation based on modifications)
     SELECT count(*) INTO tables_needing_vacuum 
     FROM pg_stat_user_tables 
     WHERE n_dead_tup > 1000 
        OR (n_live_tup > 0 AND (n_dead_tup::FLOAT / n_live_tup::FLOAT) > 0.1);
     
-    -- Compter les index inutilisés (estimation)
+    -- Count unused indexes (estimation)
     SELECT count(*) INTO unused_indexes_count 
     FROM pg_stat_user_indexes 
     WHERE idx_scan < 10 AND pg_relation_size(indexrelid) > 1024 * 1024;
@@ -277,9 +277,9 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- NETTOYAGE DES OBJETS DE MAINTENANCE (COMMENTÉ POUR LES TESTS)
+-- CLEANUP OF MAINTENANCE OBJECTS (COMMENTED FOR TESTS)
 -- ============================================================================
--- RAPPEL: Décommenter ces lignes à la fin des tests pour nettoyer les objets
+-- REMINDER: Uncomment these lines at the end of tests to clean up objects
 -- DROP VIEW IF EXISTS test_performance_schema.tables_needing_vacuum;
 -- DROP VIEW IF EXISTS test_performance_schema.tables_needing_analyze;
 -- DROP VIEW IF EXISTS test_performance_schema.unused_indexes;

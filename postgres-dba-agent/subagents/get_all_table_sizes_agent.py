@@ -66,3 +66,4 @@ def get_all_table_sizes_agent():
     )
     
     return agent
+

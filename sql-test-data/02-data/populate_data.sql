@@ -1,18 +1,18 @@
 -- ============================================================================
 -- PostgreSQL DBA Multi-Agent Test Data Population
 -- ============================================================================
--- Ce script remplit la base avec des données réalistes pour tester les agents
+-- This script populates the database with realistic data to test the agents
 -- ============================================================================
 
--- Reset pg_stat_statements pour des statistiques fraîches
--- COMMENTÉ: Nécessite des privilèges spéciaux que l'agent DBA pourrait ne pas avoir
+-- Reset pg_stat_statements for fresh statistics
+-- COMMENTED: Requires special privileges that the DBA agent might not have
 -- SELECT pg_stat_statements_reset();
 
 -- ============================================================================
--- DONNÉES ECOMMERCE - Application e-commerce réaliste
+-- ECOMMERCE DATA - Realistic e-commerce application
 -- ============================================================================
 
--- Insérer des catégories (éviter les doublons)
+-- Insert categories (avoid duplicates)
 INSERT INTO ecommerce_schema.categories (category_name, description, parent_category_id) 
 SELECT * FROM (VALUES
 ('Electronics', 'Electronic devices and gadgets', NULL),
@@ -31,8 +31,8 @@ WHERE NOT EXISTS (
     WHERE categories.category_name = new_categories.category_name
 );
 
--- Insérer des utilisateurs (mixture de types) - éviter les doublons
--- Utilisation de MD5 simple au lieu de pgcrypto pour éviter les dépendances d'extension
+-- Insert users (mixture of types) - avoid duplicates
+-- Using simple MD5 instead of pgcrypto to avoid extension dependencies
 INSERT INTO ecommerce_schema.users (username, email, password_hash, first_name, last_name, date_of_birth, phone, user_type) 
 SELECT * FROM (VALUES
 ('admin_user', 'admin@example.com', md5('admin123'), 'Admin', 'User', DATE '1980-01-01', '+1234567890', 'admin'),
@@ -51,7 +51,7 @@ WHERE NOT EXISTS (
     WHERE users.username = new_users.username
 );
 
--- Insérer des produits - éviter les doublons
+-- Insert products - avoid duplicates
 INSERT INTO ecommerce_schema.products (product_name, description, category_id, sku, price, cost, weight, inventory_count) 
 SELECT * FROM (VALUES
 ('Laptop Pro 15"', 'High-performance laptop for professionals', 2, 'LAPTOP-PRO-15', 1299.99, 899.99, 2.1, 50),
@@ -70,7 +70,7 @@ WHERE NOT EXISTS (
     WHERE products.sku = new_products.sku
 );
 
--- Générer plus de produits pour avoir des données substantielles - éviter les doublons
+-- Generate more products to have substantial data - avoid duplicates
 INSERT INTO ecommerce_schema.products (product_name, description, category_id, sku, price, cost, weight, inventory_count)
 SELECT 
     'Product ' || i,
@@ -87,7 +87,7 @@ WHERE NOT EXISTS (
     WHERE products.sku = 'SKU-' || LPAD(i::text, 6, '0')
 );
 
--- Insérer des commandes réalistes (étalées sur plusieurs mois)
+-- Insert realistic orders (spread over several months)
 DO $$
 DECLARE
     current_order_date TIMESTAMP := NOW() - INTERVAL '6 months';
@@ -100,29 +100,29 @@ DECLARE
     product_price DECIMAL(10,2);
     order_total DECIMAL(12,2);
 BEGIN
-    -- Vérifier qu'il y a des utilisateurs clients
+    -- Check that there are customer users
     IF NOT EXISTS (SELECT 1 FROM ecommerce_schema.users WHERE user_type = 'customer') THEN
-        RAISE NOTICE 'Aucun utilisateur client trouvé. Arrêt de la création de commandes.';
+        RAISE NOTICE 'No customer users found. Stopping order creation.';
         RETURN;
     END IF;
     
     WHILE current_order_date <= end_date LOOP
-        -- Créer 0-5 commandes par jour
+        -- Create 0-5 orders per day
         FOR day_orders IN 0..(RANDOM() * 5)::INTEGER LOOP
             order_count := order_count + 1;
-            -- Sélectionner un utilisateur aléatoire directement depuis la table
+            -- Select a random user directly from the table
             SELECT user_id INTO selected_user_id 
             FROM ecommerce_schema.users 
             WHERE user_type = 'customer' 
             ORDER BY RANDOM() 
             LIMIT 1;
             
-            -- Vérifier qu'on a bien un utilisateur
+            -- Check that we have a user
             IF selected_user_id IS NULL THEN
-                CONTINUE; -- Passer à la prochaine itération
+                CONTINUE; -- Skip to next iteration
             END IF;
             
-            -- Insérer la commande
+            -- Insert the order
             INSERT INTO ecommerce_schema.orders (user_id, order_date, status, total_amount, shipping_cost, tax_amount, payment_method, payment_status)
             VALUES (
                 selected_user_id,
@@ -133,9 +133,9 @@ BEGIN
                     WHEN 2 THEN 'shipped'
                     ELSE 'delivered'
                 END,
-                0, -- sera mis à jour après insertion des items
+                0, -- will be updated after inserting items
                 9.99,
-                0, -- sera calculé
+                0, -- will be calculated
                 CASE (RANDOM() * 3)::INTEGER
                     WHEN 0 THEN 'credit_card'
                     WHEN 1 THEN 'debit_card'
@@ -146,10 +146,10 @@ BEGIN
             
             order_total := 0;
             
-            -- Ajouter 1-5 produits à la commande
+            -- Add 1-5 products to the order
             product_count := 1 + (RANDOM() * 4)::INTEGER;
             FOR product_num IN 1..product_count LOOP
-                -- Sélectionner un produit existant au hasard
+                -- Select an existing product at random
                 SELECT product_id, price INTO selected_product_id, product_price 
                 FROM ecommerce_schema.products 
                 ORDER BY RANDOM() 
@@ -169,7 +169,7 @@ BEGIN
                 END IF;
             END LOOP;
             
-            -- Mettre à jour le total de la commande
+-- Update the order total
             UPDATE ecommerce_schema.orders 
             SET total_amount = order_total + shipping_cost,
                 tax_amount = order_total * 0.08
@@ -183,12 +183,12 @@ BEGIN
     RAISE NOTICE 'Inserted % orders with items', order_count;
 END $$;
 
--- Insérer des avis produits - éviter les doublons
+-- Insert product reviews - avoid duplicates
 INSERT INTO ecommerce_schema.reviews (product_id, user_id, rating, title, review_text, is_verified)
 SELECT 
     p.product_id,
     u.user_id,
-    (1 + (RANDOM() * 4)::INTEGER), -- Rating de 1 à 5
+    (1 + (RANDOM() * 4)::INTEGER), -- Rating from 1 to 5
     'Review title ' || i,
     'This is a review text for product. ' || 
     CASE WHEN RANDOM() > 0.5 THEN 'I really like this product!' ELSE 'Could be better.' END,
@@ -203,13 +203,13 @@ WHERE NOT EXISTS (
 LIMIT 500;
 
 -- ============================================================================
--- DONNÉES ANALYTICS
+-- ANALYTICS DATA
 -- ============================================================================
 
--- Insérer des sessions utilisateur
+-- Insert user sessions
 INSERT INTO analytics_schema.user_sessions (user_id, session_start, session_end, ip_address, page_views, actions_taken, conversion)
 SELECT 
-    (CASE WHEN RANDOM() > 0.3 THEN 2 + (RANDOM() * 8)::INTEGER ELSE NULL END), -- Certaines sessions anonymes
+    (CASE WHEN RANDOM() > 0.3 THEN 2 + (RANDOM() * 8)::INTEGER ELSE NULL END), -- Some anonymous sessions
     NOW() - (RANDOM() * INTERVAL '30 days'),
     NOW() - (RANDOM() * INTERVAL '30 days') + (RANDOM() * INTERVAL '2 hours'),
     ('192.168.' || (1 + RANDOM() * 254)::INTEGER || '.' || (1 + RANDOM() * 254)::INTEGER)::INET,
@@ -218,7 +218,7 @@ SELECT
     RANDOM() > 0.85
 FROM generate_series(1, 2000);
 
--- Insérer des événements
+-- Insert events
 INSERT INTO analytics_schema.events (session_id, user_id, event_type, event_data, timestamp)
 SELECT 
     s.session_id,
@@ -233,20 +233,20 @@ SELECT
     ('{"page": "/product/' || (1 + RANDOM() * 1000)::INTEGER || '"}')::JSONB,
     s.session_start + (RANDOM() * (s.session_end - s.session_start))
 FROM analytics_schema.user_sessions s,
-     generate_series(1, 3); -- 3 événements par session en moyenne
+     generate_series(1, 3); -- 3 events per session on average
 
 -- ============================================================================
--- DONNÉES D'AUDIT
+-- AUDIT DATA
 -- ============================================================================
 
--- Insérer des logs de connexion (certains échecs)
+-- Insert login logs (some failures)
 INSERT INTO audit_schema.login_logs (user_id, username, login_time, ip_address, success, failure_reason)
 SELECT 
     CASE WHEN RANDOM() > 0.1 THEN (2 + (RANDOM() * 8)::INTEGER) ELSE NULL END,
     CASE WHEN RANDOM() > 0.1 THEN u.username ELSE 'invalid_user_' || i END,
     NOW() - (RANDOM() * INTERVAL '30 days'),
     ('10.0.' || (1 + RANDOM() * 254)::INTEGER || '.' || (1 + RANDOM() * 254)::INTEGER)::INET,
-    RANDOM() > 0.15, -- 15% d'échecs
+    RANDOM() > 0.15, -- 15% failures
     CASE WHEN RANDOM() > 0.15 THEN NULL ELSE 
         CASE (RANDOM() * 3)::INTEGER
             WHEN 0 THEN 'invalid_password'
@@ -258,10 +258,10 @@ FROM generate_series(1, 1000) i
 LEFT JOIN ecommerce_schema.users u ON u.user_id = (2 + (RANDOM() * 8)::INTEGER);
 
 -- ============================================================================
--- DONNÉES DE TEST PERFORMANCE
+-- PERFORMANCE TEST DATA
 -- ============================================================================
 
--- Remplir la grande table (cela prendra du temps - commencer petit)
+-- Fill the large table (this will take time - start small)
 INSERT INTO test_performance_schema.large_table (data_column1, data_column2, data_column3, data_column4, data_column6)
 SELECT 
     'Data ' || i,
@@ -269,25 +269,25 @@ SELECT
     (RANDOM() * 999999.99999)::DECIMAL(15,5),
     'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
     ('{"key": "value", "number": ' || i || ', "random": ' || RANDOM() || '}')::JSONB
-FROM generate_series(1, 100000) i; -- Commencer avec 100k lignes
+FROM generate_series(1, 100000) i; -- Start with 100k rows
 
--- Remplir la table avec des données dupliquées (pour test d'index)
+-- Fill table with duplicate data (for index testing)
 INSERT INTO test_performance_schema.duplicate_data (duplicate_field, search_field, random_data)
 SELECT 
-    'duplicate_value_' || ((i % 100) + 1), -- Beaucoup de doublons
+    'duplicate_value_' || ((i % 100) + 1), -- Many duplicates
     'search_me_' || i,
     'Random data ' || i || ' with some text to make it larger'
 FROM generate_series(1, 50000) i;
 
 -- ============================================================================
--- MISE À JOUR DES STATISTIQUES ET AFFICHAGE DU RÉSUMÉ
+-- STATISTICS UPDATE AND SUMMARY DISPLAY
 -- ============================================================================
 
--- Analyser toutes les tables pour des statistiques fraîches
--- COMMENTÉ: L'agent DBA pourrait ne pas avoir les privilèges pour ANALYZE sur tous les schémas
+-- Analyze all tables for fresh statistics
+-- COMMENTED: The DBA agent might not have privileges to ANALYZE on all schemas
 -- ANALYZE;
 
--- Afficher un résumé
+-- Display a summary
 DO $$
 DECLARE
     total_users INTEGER;

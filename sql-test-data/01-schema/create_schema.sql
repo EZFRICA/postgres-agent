@@ -1,15 +1,15 @@
 -- ============================================================================
 -- PostgreSQL DBA Multi-Agent Test Schema Creation
 -- ============================================================================
--- Ce script crée la structure de base pour tester le système DBA multi-agent
+-- This script creates the basic structure for testing the multi-agent DBA system
 -- ============================================================================
 
--- Activer les extensions nécessaires
+-- Enable necessary extensions
 -- CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 -- CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- CREATE EXTENSION IF NOT EXISTS btree_gin;
 
--- Créer les schémas de test
+-- Create test schemas
 -- CREATE SCHEMA IF NOT EXISTS ecommerce_schema;
 -- CREATE SCHEMA IF NOT EXISTS analytics_schema;
 -- CREATE SCHEMA IF NOT EXISTS audit_schema;
@@ -17,10 +17,10 @@
 -- CREATE SCHEMA IF NOT EXISTS test_security_schema;
 
 -- ============================================================================
--- SCHEMA ECOMMERCE - Application e-commerce réaliste
+-- ECOMMERCE SCHEMA - Realistic e-commerce application
 -- ============================================================================
 
--- Table des utilisateurs
+-- Users table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.users (
     user_id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.users (
     user_type VARCHAR(20) DEFAULT 'customer'
 );
 
--- Table des catégories de produits
+-- Product categories table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.categories (
     category_id SERIAL PRIMARY KEY,
     category_name VARCHAR(100) NOT NULL,
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.categories (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Table des produits
+-- Products table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.products (
     product_id SERIAL PRIMARY KEY,
     product_name VARCHAR(200) NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.products (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Table des commandes
+-- Orders table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.orders (
     order_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES ecommerce_schema.users(user_id),
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.orders (
     notes TEXT
 );
 
--- Table des articles de commande
+-- Order items table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.order_items (
     order_item_id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES ecommerce_schema.orders(order_id),
@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.order_items (
     total_price DECIMAL(12,2) NOT NULL
 );
 
--- Table des avis clients
+-- Customer reviews table
 CREATE TABLE IF NOT EXISTS ecommerce_schema.reviews (
     review_id SERIAL PRIMARY KEY,
     product_id INTEGER NOT NULL REFERENCES ecommerce_schema.products(product_id),
@@ -103,10 +103,10 @@ CREATE TABLE IF NOT EXISTS ecommerce_schema.reviews (
 );
 
 -- ============================================================================
--- SCHEMA ANALYTICS - Tables d'analyse et reporting
+-- ANALYTICS SCHEMA - Analysis and reporting tables
 -- ============================================================================
 
--- Table des sessions utilisateur
+-- User sessions table
 CREATE TABLE IF NOT EXISTS analytics_schema.user_sessions (
     session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id INTEGER REFERENCES ecommerce_schema.users(user_id),
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS analytics_schema.user_sessions (
     conversion BOOLEAN DEFAULT FALSE
 );
 
--- Table des événements
+-- Events table
 CREATE TABLE IF NOT EXISTS analytics_schema.events (
     event_id BIGSERIAL PRIMARY KEY,
     session_id UUID REFERENCES analytics_schema.user_sessions(session_id),
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS analytics_schema.events (
     page_url VARCHAR(500)
 );
 
--- Table des métriques quotidiennes
+-- Daily metrics table
 CREATE TABLE IF NOT EXISTS analytics_schema.daily_metrics (
     metric_date DATE PRIMARY KEY,
     total_users INTEGER,
@@ -144,10 +144,10 @@ CREATE TABLE IF NOT EXISTS analytics_schema.daily_metrics (
 );
 
 -- ============================================================================
--- SCHEMA AUDIT - Tables d'audit et logs
+-- AUDIT SCHEMA - Audit and logging tables
 -- ============================================================================
 
--- Table des logs d'activité
+-- Activity logs table
 CREATE TABLE IF NOT EXISTS audit_schema.activity_logs (
     log_id BIGSERIAL PRIMARY KEY,
     table_name VARCHAR(100),
@@ -160,7 +160,7 @@ CREATE TABLE IF NOT EXISTS audit_schema.activity_logs (
     ip_address INET
 );
 
--- Table des logs de connexion
+-- Login logs table
 CREATE TABLE IF NOT EXISTS audit_schema.login_logs (
     log_id BIGSERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES ecommerce_schema.users(user_id),
@@ -173,10 +173,10 @@ CREATE TABLE IF NOT EXISTS audit_schema.login_logs (
 );
 
 -- ============================================================================
--- TABLES DE TEST PERFORMANCE
+-- PERFORMANCE TEST TABLES
 -- ============================================================================
 
--- Grande table pour tester les performances (sera remplie plus tard)
+-- Large table for performance testing (will be populated later)
 CREATE TABLE IF NOT EXISTS test_performance_schema.large_table (
     id BIGSERIAL PRIMARY KEY,
     data_column1 VARCHAR(100),
@@ -188,7 +188,7 @@ CREATE TABLE IF NOT EXISTS test_performance_schema.large_table (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Table avec des données dupliquées (pour tester les index)
+-- Table with duplicate data (for testing indexes)
 CREATE TABLE IF NOT EXISTS test_performance_schema.duplicate_data (
     id SERIAL PRIMARY KEY,
     duplicate_field VARCHAR(50), -- Beaucoup de valeurs dupliquées
@@ -198,10 +198,10 @@ CREATE TABLE IF NOT EXISTS test_performance_schema.duplicate_data (
 );
 
 -- ============================================================================
--- CRÉATION D'INDEX BASIQUES (certains manqueront intentionnellement)
+-- BASIC INDEX CREATION (some will be intentionally missing)
 -- ============================================================================
 
--- Index essentiels pour ecommerce
+-- Essential indexes for ecommerce
 CREATE INDEX IF NOT EXISTS idx_users_email ON ecommerce_schema.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON ecommerce_schema.users(username);
 CREATE INDEX IF NOT EXISTS idx_products_category ON ecommerce_schema.products(category_id);
@@ -209,28 +209,28 @@ CREATE INDEX IF NOT EXISTS idx_orders_user ON ecommerce_schema.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_date ON ecommerce_schema.orders(order_date);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON ecommerce_schema.order_items(order_id);
 
--- Index pour analytics (certains manqueront)
+-- Indexes for analytics (some will be missing)
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON analytics_schema.user_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_events_session ON analytics_schema.events(session_id);
--- Manquera intentionnellement : index sur analytics_schema.events(timestamp)
--- Manquera intentionnellement : index sur analytics_schema.events(event_type)
+-- Will be intentionally missing: index on analytics_schema.events(timestamp)
+-- Will be intentionally missing: index on analytics_schema.events(event_type)
 
--- Index pour audit
+-- Indexes for audit
 CREATE INDEX IF NOT EXISTS idx_activity_logs_timestamp ON audit_schema.activity_logs(timestamp);
--- Manquera intentionnellement : index sur audit_schema.activity_logs(table_name)
+-- Will be intentionally missing: index on audit_schema.activity_logs(table_name)
 
 -- ============================================================================
--- CONFIGURATION INITIALE
+-- INITIAL CONFIGURATION
 -- ============================================================================
 
--- Commenter pour permettre les tests sans extension
+-- Commented to allow testing without extensions
 COMMENT ON SCHEMA ecommerce_schema IS 'E-commerce application schema with realistic tables';
 COMMENT ON SCHEMA analytics_schema IS 'Analytics and reporting schema';
 COMMENT ON SCHEMA audit_schema IS 'Audit and logging schema';
 COMMENT ON SCHEMA test_performance_schema IS 'Performance testing tables';
 COMMENT ON SCHEMA test_security_schema IS 'Security testing objects';
 
--- Afficher un résumé de création
+-- Display creation summary
 DO $$
 BEGIN
     RAISE NOTICE '============================================================================';
