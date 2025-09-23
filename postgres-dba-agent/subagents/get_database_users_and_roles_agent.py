@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_database_users_and_roles_agent():
     """Create and return the get_database_users_and_roles specialized agent."""
-    
+
     # Load only the get_database_users_and_roles tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_database_users_and_roles")
-    
+
     agent = LlmAgent(
         name="GetdatabaseusersandrolesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_database_users_and_roles_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

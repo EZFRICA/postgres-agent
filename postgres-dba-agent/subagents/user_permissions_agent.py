@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_user_permissions_agent():
     """Create and return the user permissions specialized agent."""
-    
+
     # Load only the get_user_table_permissions tool
     from ..utils.load_tools_persistent import load_tools_persistent
+
     tools = load_tools_persistent(config.TOOLBOX_URL, "get_user_table_permissions")
-    
+
     agent = LlmAgent(
         name="UserPermissionsAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -71,5 +72,5 @@ def get_user_permissions_agent():
         """,
         tools=tools,
     )
-    
+
     return agent

@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_memory_configuration_agent():
     """Create and return the get_memory_configuration specialized agent."""
-    
+
     # Load only the get_memory_configuration tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_memory_configuration")
-    
+
     agent = LlmAgent(
         name="GetmemoryconfigurationAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_memory_configuration_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

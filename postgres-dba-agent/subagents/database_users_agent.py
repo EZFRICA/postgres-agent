@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_database_users_agent():
     """Create and return the database users specialized agent."""
-    
+
     # Load only the get_database_users_and_roles tool
     from ..utils.load_tools_persistent import load_tools_persistent
+
     tools = load_tools_persistent(config.TOOLBOX_URL, "get_database_users_and_roles")
-    
+
     agent = LlmAgent(
         name="DatabaseUsersAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -70,5 +71,5 @@ def get_database_users_agent():
         """,
         tools=tools,
     )
-    
+
     return agent

@@ -55,25 +55,24 @@ If you plan to use Google Cloud's Vertex AI with your agent, follow these one-ti
 
 2. **Create a new database and user (IAM-based)**
    ```sql
-   -- For IAM-based authentication, create user without password
-   CREATE USER toolbox_user;
+   -- For IAM-based authentication, 
    CREATE DATABASE toolbox_db;
-   GRANT ALL PRIVILEGES ON DATABASE toolbox_db TO toolbox_user;
-   ALTER DATABASE toolbox_db OWNER TO toolbox_user;
+   GRANT ALL PRIVILEGES ON DATABASE toolbox_db TO iam_user;
+   ALTER DATABASE toolbox_db OWNER TO iam_user;
    \q
    ```
 
 3. **Connect with your new user (IAM authentication)**
    ```bash
    # Using IAM authentication (no password required)
-   psql -h 127.0.0.1 -U toolbox_user -d toolbox_db
+   psql -h 127.0.0.1 -U iam_user -d toolbox_db
    ```
 
 4. **Set up test data (optional)**
    ```bash
    # Run the test data scripts to populate your database
-   psql -h 127.0.0.1 -U toolbox_user -d toolbox_db -f sql-test-data/01-schema/create_schema.sql
-   psql -h 127.0.0.1 -U toolbox_user -d toolbox_db -f sql-test-data/02-data/populate_data.sql
+   psql -h 127.0.0.1 -U iam_user -d toolbox_db -f sql-test-data/01-schema/create_schema.sql
+   psql -h 127.0.0.1 -U iam_user -d toolbox_db -f sql-test-data/02-data/populate_data.sql
    ```
 
 ### Step 2: Install and configure Toolbox
@@ -106,7 +105,7 @@ If you plan to use Google Cloud's Vertex AI with your agent, follow these one-ti
    export DATABASE_HOST="127.0.0.1"
    export DATABASE_PORT="5432"
    export DATABASE_NAME="toolbox_db"
-   export DATABASE_USER="toolbox_user"
+   export DATABASE_USER="iam_user"
    # No password needed with IAM authentication
    ```
 
@@ -303,7 +302,7 @@ result = await maintenance_agent.get_database_sizes()
 
 2. **Tool Execution Errors**
    - Verify database credentials in tools.yaml (IAM-based authentication)
-   - Check database permissions for toolbox_user
+   - Check database permissions for iam_user
    - Ensure database exists and is accessible
    - Verify IAM roles and permissions are properly configured
 

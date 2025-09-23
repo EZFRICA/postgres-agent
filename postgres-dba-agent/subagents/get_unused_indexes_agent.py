@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_unused_indexes_agent():
     """Create and return the get_unused_indexes specialized agent."""
-    
+
     # Load only the get_unused_indexes tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_unused_indexes")
-    
+
     agent = LlmAgent(
         name="GetunusedindexesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_unused_indexes_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

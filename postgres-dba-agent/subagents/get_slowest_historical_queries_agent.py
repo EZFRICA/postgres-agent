@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_slowest_historical_queries_agent():
     """Create and return the get_slowest_historical_queries specialized agent."""
-    
+
     # Load only the get_slowest_historical_queries tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_slowest_historical_queries")
-    
+
     agent = LlmAgent(
         name="GetslowesthistoricalqueriesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_slowest_historical_queries_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

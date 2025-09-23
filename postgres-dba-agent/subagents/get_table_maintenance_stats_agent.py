@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_table_maintenance_stats_agent():
     """Create and return the get_table_maintenance_stats specialized agent."""
-    
+
     # Load only the get_table_maintenance_stats tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_table_maintenance_stats")
-    
+
     agent = LlmAgent(
         name="GettablemaintenancestatsAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_table_maintenance_stats_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

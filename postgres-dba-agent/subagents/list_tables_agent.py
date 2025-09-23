@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_list_tables_agent():
     """Create and return the list tables specialized agent."""
-    
+
     # Load only the list_database_tables tool
     from ..utils.load_tools_persistent import load_tools_persistent
+
     tools = load_tools_persistent(config.TOOLBOX_URL, "list_database_tables")
-    
+
     agent = LlmAgent(
         name="ListTablesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -65,5 +66,5 @@ def get_list_tables_agent():
         """,
         tools=tools,
     )
-    
+
     return agent

@@ -6,8 +6,7 @@ This agent analyzes user requests and creates execution plans for specialized ag
 from google.adk.agents import LlmAgent
 from ..logging_config import get_logger
 from ..config import settings as config
-from .agent_registry import get_agent, list_available_agents, get_agent_info
-from ..utils.load_tools_persistent import load_tools_persistent
+from .agent_registry import list_available_agents, get_agent_info
 
 logger = get_logger(__name__)
 
@@ -15,34 +14,31 @@ logger = get_logger(__name__)
 def execute_postgresql_tool(tool_name: str, **kwargs):
     """
     Execute a PostgreSQL tool directly.
-    
+
     Args:
         tool_name: Name of the PostgreSQL tool to execute
         **kwargs: Parameters to pass to the tool
-        
+
     Returns:
         Result from the PostgreSQL tool
     """
     try:
         logger.info(f"Executing PostgreSQL tool: {tool_name}")
-        
+
         # Load the specific tool
         from ..utils.load_tools_persistent import load_single_tool
+
         tool = load_single_tool(config.TOOLBOX_URL, tool_name)
-        
+
         # Execute the tool with provided parameters
         if kwargs:
             result = tool(**kwargs)
         else:
             result = tool()
-        
+
         logger.info(f"Successfully executed tool: {tool_name}")
-        return {
-            "status": "success",
-            "tool_name": tool_name,
-            "result": result
-        }
-        
+        return {"status": "success", "tool_name": tool_name, "result": result}
+
     except Exception as e:
         error_msg = f"Error executing tool '{tool_name}': {str(e)}"
         logger.error(error_msg)
@@ -53,17 +49,17 @@ def execute_specialized_agent(agent_name: str, **kwargs):
     """
     Execute a specialized agent by name.
     This function delegates to the appropriate PostgreSQL tool.
-    
+
     Args:
         agent_name: Name of the agent to execute
         **kwargs: Parameters to pass to the agent
-        
+
     Returns:
         Result from the specialized agent
     """
     try:
         logger.info(f"Executing specialized agent: {agent_name}")
-        
+
         # Map agent names to their corresponding tools
         agent_tool_mapping = {
             "list_database_tables_agent": "list_database_tables",
@@ -89,17 +85,17 @@ def execute_specialized_agent(agent_name: str, **kwargs):
             "get_user_table_permissions_agent": "get_user_table_permissions",
             "get_user_role_memberships_agent": "get_user_role_memberships",
         }
-        
+
         # Get the corresponding tool name
         tool_name = agent_tool_mapping.get(agent_name)
         if not tool_name:
             error_msg = f"Agent '{agent_name}' not found in mapping. Available agents: {list(agent_tool_mapping.keys())}"
             logger.error(error_msg)
             return {"error": error_msg, "status": "failed"}
-        
+
         # Execute the corresponding tool
         return execute_postgresql_tool(tool_name, **kwargs)
-        
+
     except Exception as e:
         error_msg = f"Error executing agent '{agent_name}': {str(e)}"
         logger.error(error_msg)
@@ -109,23 +105,23 @@ def execute_specialized_agent(agent_name: str, **kwargs):
 def list_available_specialized_agents():
     """
     List all available specialized agents.
-    
+
     Returns:
         List of available agent names and their info
     """
     try:
         agents = list_available_agents()
         agent_info = {}
-        
+
         for agent_name in agents:
             agent_info[agent_name] = get_agent_info(agent_name)
-            
+
         return {
             "available_agents": agents,
             "agent_details": agent_info,
-            "total_count": len(agents)
+            "total_count": len(agents),
         }
-        
+
     except Exception as e:
         logger.error(f"Error listing agents: {e}")
         return {"error": f"Error listing agents: {str(e)}", "status": "failed"}
@@ -333,7 +329,11 @@ def get_coordinator_agent():
         **Next Steps:** [Guidance on how to proceed]
         ```
         """,
-        tools=[execute_specialized_agent, execute_postgresql_tool, list_available_specialized_agents]
+        tools=[
+            execute_specialized_agent,
+            execute_postgresql_tool,
+            list_available_specialized_agents,
+        ],
     )
-    
+
     return coordinator

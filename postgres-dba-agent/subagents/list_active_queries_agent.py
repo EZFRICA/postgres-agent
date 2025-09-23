@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_list_active_queries_agent():
     """Create and return the list active queries specialized agent."""
-    
+
     # Load only the list_active_queries tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "list_active_queries")
-    
+
     agent = LlmAgent(
         name="ListActiveQueriesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -62,5 +63,5 @@ def get_list_active_queries_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

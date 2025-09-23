@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_cache_hit_ratios_agent():
     """Create and return the get_cache_hit_ratios specialized agent."""
-    
+
     # Load only the get_cache_hit_ratios tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_cache_hit_ratios")
-    
+
     agent = LlmAgent(
         name="GetcachehitratiosAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_cache_hit_ratios_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

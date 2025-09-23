@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_user_role_memberships_agent():
     """Create and return the get_user_role_memberships specialized agent."""
-    
+
     # Load only the get_user_role_memberships tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_user_role_memberships")
-    
+
     agent = LlmAgent(
         name="GetuserrolemembershipsAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_user_role_memberships_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

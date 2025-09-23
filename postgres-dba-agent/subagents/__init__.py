@@ -50,17 +50,14 @@ from .pedagogical_agent import get_pedagogical_agent
 from .agent_registry import get_agent, list_available_agents, get_agent_info
 
 
-
 __all__ = [
     # New intelligent coordinator
     "get_coordinator_agent",
-    
     # Specialized single-tool agents
     "get_list_tables_agent",
     "get_database_users_agent",
     "get_user_permissions_agent",
     "get_synthesis_agent",
-    
     # Schema and structure agents
     "get_list_database_tables_agent",
     "get_table_sizes_summary_agent",
@@ -68,13 +65,11 @@ __all__ = [
     "get_find_invalid_indexes_agent",
     "get_unused_indexes_agent",
     "get_table_maintenance_stats_agent",
-    
     # Security and user management agents
     "get_database_users_and_roles_agent",
     "get_user_table_permissions_agent",
     "get_user_role_memberships_agent",
     "get_current_connections_summary_agent",
-    
     # Performance and monitoring agents
     "get_list_active_queries_agent",
     "get_slowest_historical_queries_agent",
@@ -83,7 +78,6 @@ __all__ = [
     "get_blocking_sessions_agent",
     "get_long_running_transactions_agent",
     "get_cache_hit_ratios_agent",
-    
     # System and maintenance agents
     "get_database_sizes_agent",
     "get_memory_configuration_agent",
@@ -91,12 +85,10 @@ __all__ = [
     "get_replication_status_agent",
     "get_list_installed_extensions_agent",
     "get_list_available_extensions_agent",
-    
     # Pedagogical agent
     "get_pedagogical_agent",
-    
     # Agent registry
     "get_agent",
-    "list_available_agents", 
+    "list_available_agents",
     "get_agent_info",
 ]

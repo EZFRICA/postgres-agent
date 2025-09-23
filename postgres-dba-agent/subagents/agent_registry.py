@@ -36,7 +36,6 @@ AGENT_REGISTRY = {
     "list_database_tables_agent": get_list_database_tables_agent,
     "list_installed_extensions_agent": get_list_installed_extensions_agent,
     "list_available_extensions_agent": get_list_available_extensions_agent,
-    
     # Performance tools
     "get_slowest_historical_queries_agent": get_slowest_historical_queries_agent,
     "get_most_io_intensive_queries_agent": get_most_io_intensive_queries_agent,
@@ -44,26 +43,22 @@ AGENT_REGISTRY = {
     "get_blocking_sessions_agent": get_blocking_sessions_agent,
     "get_long_running_transactions_agent": get_long_running_transactions_agent,
     "get_cache_hit_ratios_agent": get_cache_hit_ratios_agent,
-    
     # Schema tools
     "get_table_sizes_summary_agent": get_table_sizes_summary_agent,
     "get_all_table_sizes_agent": get_all_table_sizes_agent,
     "find_invalid_indexes_agent": get_find_invalid_indexes_agent,
     "get_unused_indexes_agent": get_unused_indexes_agent,
     "get_table_maintenance_stats_agent": get_table_maintenance_stats_agent,
-    
     # Security tools
     "get_database_users_and_roles_agent": get_database_users_and_roles_agent,
     "get_user_table_permissions_agent": get_user_table_permissions_agent,
     "get_user_role_memberships_agent": get_user_role_memberships_agent,
     "get_current_connections_summary_agent": get_current_connections_summary_agent,
-    
     # System tools
     "get_database_sizes_agent": get_database_sizes_agent,
     "get_memory_configuration_agent": get_memory_configuration_agent,
     "get_postgresql_version_info_agent": get_postgresql_version_info_agent,
     "get_replication_status_agent": get_replication_status_agent,
-    
     # Synthesis
     "synthesis_agent": get_synthesis_agent,
 }
@@ -72,27 +67,29 @@ AGENT_REGISTRY = {
 def get_agent(agent_name: str):
     """
     Get a specialized agent by name.
-    
+
     Args:
         agent_name: Name of the agent to retrieve
-        
+
     Returns:
         Agent instance
-        
+
     Raises:
         KeyError: If agent name is not found
     """
     if agent_name not in AGENT_REGISTRY:
         available_agents = list(AGENT_REGISTRY.keys())
-        raise KeyError(f"Agent '{agent_name}' not found. Available agents: {available_agents}")
-    
+        raise KeyError(
+            f"Agent '{agent_name}' not found. Available agents: {available_agents}"
+        )
+
     return AGENT_REGISTRY[agent_name]()
 
 
 def list_available_agents():
     """
     List all available specialized agents.
-    
+
     Returns:
         List of agent names
     """
@@ -102,23 +99,23 @@ def list_available_agents():
 def get_agent_info(agent_name: str):
     """
     Get information about a specific agent.
-    
+
     Args:
         agent_name: Name of the agent
-        
+
     Returns:
         Dictionary with agent information
     """
     if agent_name not in AGENT_REGISTRY:
         return {"error": f"Agent '{agent_name}' not found"}
-    
+
     # Basic agent information
     agent_info = {
         "name": agent_name,
         "available": True,
-        "description": f"Specialized agent for {agent_name.replace('_', ' ')}"
+        "description": f"Specialized agent for {agent_name.replace('_', ' ')}",
     }
-    
+
     # Add specific tool information based on agent type
     if "tables" in agent_name:
         agent_info["tool"] = "list_database_tables"
@@ -136,5 +133,5 @@ def get_agent_info(agent_name: str):
         agent_info["tool"] = "NONE"
         agent_info["parameters"] = "NONE"
         agent_info["description"] = "Combines results from multiple agents"
-    
+
     return agent_info

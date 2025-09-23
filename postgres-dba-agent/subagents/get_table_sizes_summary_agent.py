@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_table_sizes_summary_agent():
     """Create and return the get_table_sizes_summary specialized agent."""
-    
+
     # Load only the get_table_sizes_summary tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_table_sizes_summary")
-    
+
     agent = LlmAgent(
         name="GettablesizessummaryAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_table_sizes_summary_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

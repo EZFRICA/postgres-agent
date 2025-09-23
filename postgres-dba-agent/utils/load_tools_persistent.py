@@ -125,16 +125,19 @@ class ToolWrapper:
             params = {k: v for k, v in params.items() if v is not None}
 
             # Special handling for tools that require parameters
-            if self.tool_name in ["get_user_table_permissions", "get_user_role_memberships"]:
+            if self.tool_name in [
+                "get_user_table_permissions",
+                "get_user_role_memberships",
+            ]:
                 if not params or "username" not in params or params["username"] is None:
                     # Return a helpful error message instead of raising an exception
                     return {
                         "error": f"❌ MISSING REQUIRED PARAMETER: {self.tool_name} requires a 'username' parameter.",
-                        "message": f"🔧 SOLUTION: First call 'get_database_users_and_roles' to get the list of users, then call this tool with a specific username from that list.",
+                        "message": "🔧 SOLUTION: First call 'get_database_users_and_roles' to get the list of users, then call this tool with a specific username from that list.",
                         "workflow": f"📋 CORRECT SEQUENCE:\n1. get_database_users_and_roles() - Get all users\n2. {self.tool_name}(username='specific_user') - Analyze specific user",
-                        "status": "blocked"
+                        "status": "blocked",
                     }
-                
+
                 # Handle usernames with special characters by quoting them
                 username = params.get("username")
                 if username and isinstance(username, str):
@@ -178,30 +181,30 @@ def get_toolbox_client(toolbox_url: str):
 def load_single_tool(toolbox_url: str, tool_name: str) -> Callable:
     """
     Load a single tool from MCP Toolbox.
-    
+
     Args:
         toolbox_url: URL of the MCP Toolbox server
         tool_name: Name of the tool to load
-        
+
     Returns:
         Wrapped tool function
     """
     global _toolbox_client
-    
+
     try:
         # Get or create toolbox client
         if _toolbox_client is None:
             _toolbox_client = ToolboxSyncClient(toolbox_url)
-        
+
         # Load single tool
         raw_tool = _toolbox_client.load_tool(tool_name)
-        
+
         # Wrap the tool for ADK compatibility
         wrapped_tool = ToolWrapper(raw_tool, tool_name)
-        
+
         logger.info(f"Successfully loaded single tool: {tool_name}")
         return wrapped_tool
-        
+
     except Exception as e:
         logger.error(f"Error loading single tool {tool_name}: {e}")
         raise

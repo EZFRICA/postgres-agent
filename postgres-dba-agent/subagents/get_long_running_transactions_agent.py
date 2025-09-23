@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_long_running_transactions_agent():
     """Create and return the get_long_running_transactions specialized agent."""
-    
+
     # Load only the get_long_running_transactions tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_long_running_transactions")
-    
+
     agent = LlmAgent(
         name="GetlongrunningtransactionsAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_long_running_transactions_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_blocking_sessions_agent():
     """Create and return the get_blocking_sessions specialized agent."""
-    
+
     # Load only the get_blocking_sessions tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "get_blocking_sessions")
-    
+
     agent = LlmAgent(
         name="GetblockingsessionsAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_blocking_sessions_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent

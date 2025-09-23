@@ -90,5 +90,5 @@ def get_synthesis_agent():
         """,
         tools=[],  # Synthesis agent has no tools, only combines results
     )
-    
+
     return agent

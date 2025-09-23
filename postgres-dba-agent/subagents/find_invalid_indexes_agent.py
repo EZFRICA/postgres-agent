@@ -12,11 +12,12 @@ logger = get_logger(__name__)
 
 def get_find_invalid_indexes_agent():
     """Create and return the find_invalid_indexes specialized agent."""
-    
+
     # Load only the find_invalid_indexes tool
     from ..utils.load_tools_persistent import load_single_tool
+
     tool = load_single_tool(config.TOOLBOX_URL, "find_invalid_indexes")
-    
+
     agent = LlmAgent(
         name="FindinvalidindexesAgent",
         model=config.SPECIALIZED_AGENTS_MODEL,
@@ -61,5 +62,5 @@ def get_find_invalid_indexes_agent():
         """,
         tools=[tool],
     )
-    
+
     return agent
