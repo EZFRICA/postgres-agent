@@ -6,125 +6,224 @@ This agent analyzes user requests and creates execution plans for specialized ag
 from google.adk.agents import LlmAgent
 from ..logging_config import get_logger
 from ..config import settings as config
-from .agent_registry import list_available_agents, get_agent_info
+from ..utils.load_tools_persistent import load_single_tool
+from .pedagogical_agent import get_pedagogical_agent
+from .synthesis_agent import get_synthesis_agent
+from .performance_agent import get_performance_agent
+from .security_agent import get_security_agent
+from .maintenance_agent import get_maintenance_agent
+from .schema_agent import get_schema_agent
 
 logger = get_logger(__name__)
 
 
-def execute_postgresql_tool(tool_name: str, **kwargs):
-    """
-    Execute a PostgreSQL tool directly.
+# Lazy-loaded tools cache
+_tools_cache = {}
 
-    Args:
-        tool_name: Name of the PostgreSQL tool to execute
-        **kwargs: Parameters to pass to the tool
 
-    Returns:
-        Result from the PostgreSQL tool
-    """
+def _get_tool(tool_name: str):
+    """Get a tool from cache or load it from MCP toolbox."""
+    if tool_name not in _tools_cache:
+        try:
+            _tools_cache[tool_name] = load_single_tool(config.TOOLBOX_URL, tool_name)
+            logger.info(f"Loaded tool: {tool_name}")
+        except Exception as e:
+            logger.error(f"Failed to load tool {tool_name}: {e}")
+            raise
+    return _tools_cache[tool_name]
+
+
+# Tool wrapper functions using load_tools_persistent
+def list_database_tables(**kwargs):
+    """List all database tables with optional schema and table filtering."""
+    tool = _get_tool("list_database_tables")
+    return tool(**kwargs)
+
+
+def get_table_sizes_summary(**kwargs):
+    """Get comprehensive table size information for a schema."""
+    tool = _get_tool("get_table_sizes_summary")
+    return tool(**kwargs)
+
+
+def get_slowest_historical_queries(**kwargs):
+    """Get the slowest queries from query history."""
+    tool = _get_tool("get_slowest_historical_queries")
+    return tool(**kwargs)
+
+
+def get_most_io_intensive_queries(**kwargs):
+    """Get the most I/O intensive queries."""
+    tool = _get_tool("get_most_io_intensive_queries")
+    return tool(**kwargs)
+
+
+def get_most_frequent_queries(**kwargs):
+    """Get the most frequently executed queries."""
+    tool = _get_tool("get_most_frequent_queries")
+    return tool(**kwargs)
+
+
+def get_blocking_sessions(**kwargs):
+    """Find sessions that are blocking other queries."""
+    tool = _get_tool("get_blocking_sessions")
+    return tool(**kwargs)
+
+
+def get_long_running_transactions(**kwargs):
+    """Find long-running transactions."""
+    tool = _get_tool("get_long_running_transactions")
+    return tool(**kwargs)
+
+
+def get_database_users_and_roles(**kwargs):
+    """List all database users and their roles."""
+    tool = _get_tool("get_database_users_and_roles")
+    return tool(**kwargs)
+
+
+def get_cache_hit_ratios(**kwargs):
+    """Get database cache hit ratios."""
+    tool = _get_tool("get_cache_hit_ratios")
+    return tool(**kwargs)
+
+
+def find_invalid_indexes(**kwargs):
+    """Find invalid or broken indexes."""
+    tool = _get_tool("find_invalid_indexes")
+    return tool(**kwargs)
+
+
+def list_active_queries(**kwargs):
+    """List currently active SQL queries on the database."""
+    tool = _get_tool("list_active_queries")
+    return tool(**kwargs)
+
+
+def list_installed_extensions(**kwargs):
+    """List all currently installed PostgreSQL extensions."""
+    tool = _get_tool("list_installed_extensions")
+    return tool(**kwargs)
+
+
+def list_available_extensions(**kwargs):
+    """List all PostgreSQL extensions available for installation."""
+    tool = _get_tool("list_available_extensions")
+    return tool(**kwargs)
+
+
+def get_unused_indexes(**kwargs):
+    """Identify indexes that are not being used."""
+    tool = _get_tool("get_unused_indexes")
+    return tool(**kwargs)
+
+
+def get_user_table_permissions(**kwargs):
+    """Get table permissions for a specific user."""
+    tool = _get_tool("get_user_table_permissions")
+    return tool(**kwargs)
+
+
+def get_current_connections_summary(**kwargs):
+    """Get summary of current database connections."""
+    tool = _get_tool("get_current_connections_summary")
+    return tool(**kwargs)
+
+
+def get_user_role_memberships(**kwargs):
+    """Get role memberships for a specific user."""
+    tool = _get_tool("get_user_role_memberships")
+    return tool(**kwargs)
+
+
+def get_database_sizes(**kwargs):
+    """Get sizes of all databases."""
+    tool = _get_tool("get_database_sizes")
+    return tool(**kwargs)
+
+
+def get_table_maintenance_stats(**kwargs):
+    """Get maintenance statistics (VACUUM/ANALYZE) for tables."""
+    tool = _get_tool("get_table_maintenance_stats")
+    return tool(**kwargs)
+
+
+def get_memory_configuration(**kwargs):
+    """Get PostgreSQL memory configuration parameters."""
+    tool = _get_tool("get_memory_configuration")
+    return tool(**kwargs)
+
+
+def get_postgresql_version_info(**kwargs):
+    """Get PostgreSQL version and build information."""
+    tool = _get_tool("get_postgresql_version_info")
+    return tool(**kwargs)
+
+
+def get_replication_status(**kwargs):
+    """Get PostgreSQL replication status."""
+    tool = _get_tool("get_replication_status")
+    return tool(**kwargs)
+
+
+# Generic tool execution function - simplified signature for ADK
+def execute_tool(tool_name: str):
+    """Execute any PostgreSQL tool by name without parameters."""
     try:
-        logger.info(f"Executing PostgreSQL tool: {tool_name}")
-
-        # Load the specific tool
-        from ..utils.load_tools_persistent import load_single_tool
-
-        tool = load_single_tool(config.TOOLBOX_URL, tool_name)
-
-        # Execute the tool with provided parameters
-        if kwargs:
-            result = tool(**kwargs)
-        else:
-            result = tool()
-
-        logger.info(f"Successfully executed tool: {tool_name}")
-        return {"status": "success", "tool_name": tool_name, "result": result}
-
+        tool = _get_tool(tool_name)
+        return tool()
     except Exception as e:
-        error_msg = f"Error executing tool '{tool_name}': {str(e)}"
-        logger.error(error_msg)
-        return {"error": error_msg, "status": "failed"}
+        logger.error(f"Error executing tool {tool_name}: {e}")
+        return {"error": f"Failed to execute {tool_name}: {str(e)}"}
 
 
-def execute_specialized_agent(agent_name: str, **kwargs):
-    """
-    Execute a specialized agent by name.
-    This function delegates to the appropriate PostgreSQL tool.
-
-    Args:
-        agent_name: Name of the agent to execute
-        **kwargs: Parameters to pass to the agent
-
-    Returns:
-        Result from the specialized agent
-    """
+# Tool discovery functions
+def list_available_tools():
+    """List all available PostgreSQL tools."""
     try:
-        logger.info(f"Executing specialized agent: {agent_name}")
-
-        # Map agent names to their corresponding tools
-        agent_tool_mapping = {
-            "list_database_tables_agent": "list_database_tables",
-            "get_table_sizes_summary_agent": "get_table_sizes_summary",
-            "get_database_users_and_roles_agent": "get_database_users_and_roles",
-            "list_active_queries_agent": "list_active_queries",
-            "get_slowest_historical_queries_agent": "get_slowest_historical_queries",
-            "get_most_io_intensive_queries_agent": "get_most_io_intensive_queries",
-            "get_most_frequent_queries_agent": "get_most_frequent_queries",
-            "get_blocking_sessions_agent": "get_blocking_sessions",
-            "get_long_running_transactions_agent": "get_long_running_transactions",
-            "get_cache_hit_ratios_agent": "get_cache_hit_ratios",
-            "find_invalid_indexes_agent": "find_invalid_indexes",
-            "get_unused_indexes_agent": "get_unused_indexes",
-            "get_table_maintenance_stats_agent": "get_table_maintenance_stats",
-            "get_database_sizes_agent": "get_database_sizes",
-            "get_memory_configuration_agent": "get_memory_configuration",
-            "get_postgresql_version_info_agent": "get_postgresql_version_info",
-            "get_replication_status_agent": "get_replication_status",
-            "list_installed_extensions_agent": "list_installed_extensions",
-            "list_available_extensions_agent": "list_available_extensions",
-            "get_current_connections_summary_agent": "get_current_connections_summary",
-            "get_user_table_permissions_agent": "get_user_table_permissions",
-            "get_user_role_memberships_agent": "get_user_role_memberships",
-        }
-
-        # Get the corresponding tool name
-        tool_name = agent_tool_mapping.get(agent_name)
-        if not tool_name:
-            error_msg = f"Agent '{agent_name}' not found in mapping. Available agents: {list(agent_tool_mapping.keys())}"
-            logger.error(error_msg)
-            return {"error": error_msg, "status": "failed"}
-
-        # Execute the corresponding tool
-        return execute_postgresql_tool(tool_name, **kwargs)
-
+        # Return list from tools.yaml categories
+        tools = [
+            "list_database_tables",
+            "get_table_sizes_summary",
+            "get_slowest_historical_queries",
+            "get_most_io_intensive_queries",
+            "get_most_frequent_queries",
+            "get_blocking_sessions",
+            "get_long_running_transactions",
+            "get_database_users_and_roles",
+            "get_cache_hit_ratios",
+            "find_invalid_indexes",
+            "list_active_queries",
+            "list_installed_extensions",
+            "list_available_extensions",
+            "get_unused_indexes",
+            "get_user_table_permissions",
+            "get_current_connections_summary",
+            "get_user_role_memberships",
+            "get_database_sizes",
+            "get_table_maintenance_stats",
+            "get_memory_configuration",
+            "get_postgresql_version_info",
+            "get_replication_status",
+        ]
+        return {"tools": tools, "count": len(tools)}
     except Exception as e:
-        error_msg = f"Error executing agent '{agent_name}': {str(e)}"
-        logger.error(error_msg)
-        return {"error": error_msg, "status": "failed"}
+        logger.error(f"Error listing tools: {e}")
+        return {"error": str(e)}
 
 
-def list_available_specialized_agents():
-    """
-    List all available specialized agents.
-
-    Returns:
-        List of available agent names and their info
-    """
+def get_tool_info(tool_name: str):
+    """Get detailed information about a specific tool."""
     try:
-        agents = list_available_agents()
-        agent_info = {}
-
-        for agent_name in agents:
-            agent_info[agent_name] = get_agent_info(agent_name)
-
+        tool = _get_tool(tool_name)
         return {
-            "available_agents": agents,
-            "agent_details": agent_info,
-            "total_count": len(agents),
+            "name": tool_name,
+            "description": getattr(tool, "__doc__", f"Tool: {tool_name}"),
+            "status": "available",
         }
-
     except Exception as e:
-        logger.error(f"Error listing agents: {e}")
-        return {"error": f"Error listing agents: {str(e)}", "status": "failed"}
+        logger.error(f"Error getting tool info for {tool_name}: {e}")
+        return {"error": str(e)}
 
 
 def get_coordinator_agent():
@@ -143,37 +242,55 @@ def get_coordinator_agent():
         4. **VALIDATE** each step completion before proceeding
         5. **SYNTHESIZE** final results from all agents
         
-        **AVAILABLE SPECIALIZED AGENTS:**
+        **AVAILABLE TOOLS & AGENTS:**
+        
+        **Direct PostgreSQL Tools (use execute_tool or execute_postgresql_tool):**
         
         **Schema & Structure:**
-        - list_database_tables_agent → list_database_tables (NO PARAMETERS)
-        - get_table_sizes_summary_agent → get_table_sizes_summary (schema_name, limit)
-        - find_invalid_indexes_agent → find_invalid_indexes (NO PARAMETERS)
-        - get_unused_indexes_agent → get_unused_indexes (min_size_mb)
-        - get_table_maintenance_stats_agent → get_table_maintenance_stats (table_name)
+        - list_database_tables (optional: schema_name, table_name)
+        - get_table_sizes_summary (optional: schema_name, limit - defaults: public, 20)
+        - find_invalid_indexes (no parameters)
+        - get_unused_indexes (optional: min_size_mb - default: 1)
+        - get_table_maintenance_stats (optional: table_name)
         
         **Security & Users:**
-        - get_database_users_and_roles_agent → get_database_users_and_roles (NO PARAMETERS)
-        - get_user_table_permissions_agent → get_user_table_permissions (table_name, username)
-        - get_user_role_memberships_agent → get_user_role_memberships (username)
-        - get_current_connections_summary_agent → get_current_connections_summary (NO PARAMETERS)
+        - get_database_users_and_roles (no parameters)
+        - get_user_table_permissions (required: username, optional: table_name)
+        - get_user_role_memberships (required: username)
+        - get_current_connections_summary (no parameters)
         
         **Performance & Monitoring:**
-        - list_active_queries_agent → list_active_queries (NO PARAMETERS)
-        - get_slowest_historical_queries_agent → get_slowest_historical_queries (limit)
-        - get_most_io_intensive_queries_agent → get_most_io_intensive_queries (limit)
-        - get_most_frequent_queries_agent → get_most_frequent_queries (limit)
-        - get_blocking_sessions_agent → get_blocking_sessions (NO PARAMETERS)
-        - get_long_running_transactions_agent → get_long_running_transactions (NO PARAMETERS)
-        - get_cache_hit_ratios_agent → get_cache_hit_ratios (NO PARAMETERS)
+        - list_active_queries (optional: min_duration_ms, exclude_apps)
+        - get_slowest_historical_queries (optional: limit - default: 10)
+        - get_most_io_intensive_queries (optional: limit - default: 10)
+        - get_most_frequent_queries (optional: limit - default: 10)
+        - get_blocking_sessions (no parameters)
+        - get_long_running_transactions (no parameters)
+        - get_cache_hit_ratios (no parameters)
         
         **System & Maintenance:**
-        - get_database_sizes_agent → get_database_sizes (NO PARAMETERS)
-        - get_memory_configuration_agent → get_memory_configuration (NO PARAMETERS)
-        - get_postgresql_version_info_agent → get_postgresql_version_info (NO PARAMETERS)
-        - get_replication_status_agent → get_replication_status (NO PARAMETERS)
-        - list_installed_extensions_agent → list_installed_extensions (NO PARAMETERS)
-        - list_available_extensions_agent → list_available_extensions (NO PARAMETERS)
+        - get_database_sizes (no parameters)
+        - get_memory_configuration (no parameters)
+        - get_postgresql_version_info (no parameters)
+        - get_replication_status (no parameters)
+        - list_installed_extensions (no parameters)
+        - list_available_extensions (no parameters)
+        
+        **Available Sub-Agents (Managed automatically by Google ADK):**
+        - PerformanceAgent → Comprehensive performance analysis and optimization
+        - SecurityAgent → Security auditing and vulnerability assessment  
+        - MaintenanceAgent → Database health and maintenance analysis
+        - SchemaAgent → Schema design analysis and optimization
+        - PedagogicalAgent → PostgreSQL concept explanations and education
+        - SynthesisAgent → Multi-source result synthesis and analysis
+        
+        **Direct Agent Communication:**
+        The coordinator can communicate directly with sub-agents by referring to them by name.
+        Google ADK automatically handles the delegation and routing.
+        
+        **Tools Registry Functions:**
+        - list_available_tools() → Get list of all available PostgreSQL tools
+        - get_tool_info(tool_name) → Get detailed information about a specific tool and its parameters
         
         **PLANNING PROCESS:**
         
@@ -207,36 +324,79 @@ def get_coordinator_agent():
         
         **Request: "List all tables and their sizes"**
         Plan:
-        - Step 1: list_database_tables_agent → Get complete table structure (all schemas + all tables)
+        - Step 1: list_database_tables() → Get complete table structure
           → Present: "Found X schemas with Y tables total. Continue to get sizes? ✅ Yes / ❌ No"
-        - Step 2: For each schema found, call get_table_sizes_summary_agent(schema_name=schema)
+        - Step 2: For each schema found, get_table_sizes_summary(schema_name=schema)
           → Present: "Schema [name] sizes: [summary]. Continue to next schema? ✅ Yes / ❌ No"
-        - Step 3: Synthesis → Combine all table sizes from all schemas
+        - Step 3: Ask SynthesisAgent to combine all results
+          → "SynthesisAgent, please synthesize the table size data from all schemas"
           → Present final comprehensive report with all tables and their sizes
         
         **Request: "Security audit"**
         Plan:
-        - Step 1: get_database_users_and_roles_agent → Get all users and roles
+        - Step 1: get_database_users_and_roles() → Get all users and roles
           → Present results and ask for validation
-        - Step 2: get_user_table_permissions_agent → Get permissions (needs usernames from Step 1)
+        - Step 2: get_user_table_permissions(username=user) → Get permissions (needs usernames from Step 1)
           → Present results and ask for validation
-        - Step 3: get_user_role_memberships_agent → Get role memberships (needs usernames from Step 1)
+        - Step 3: get_user_role_memberships(username=user) → Get role memberships
           → Present results and ask for validation
-        - Step 4: synthesis_agent → Analyze security vulnerabilities
+        - Step 4: Ask SynthesisAgent to analyze security vulnerabilities
+          → "SynthesisAgent, please analyze the security audit results and identify vulnerabilities"
           → Present final security report
         
         **Request: "Performance analysis"**
         Plan:
-        - Step 1: list_active_queries_agent → Get current active queries
+        - Step 1: list_active_queries() → Get current active queries
           → Present results and ask for validation
-        - Step 2: get_slowest_historical_queries_agent → Get historical slow queries
+        - Step 2: get_slowest_historical_queries() → Get historical slow queries
           → Present results and ask for validation
-        - Step 3: get_blocking_sessions_agent → Check for blocking sessions
+        - Step 3: get_blocking_sessions() → Check for blocking sessions
           → Present results and ask for validation
-        - Step 4: get_cache_hit_ratios_agent → Check cache performance
+        - Step 4: get_cache_hit_ratios() → Check cache performance
           → Present results and ask for validation
-        - Step 5: synthesis_agent → Analyze and recommend optimizations
-          → Present final performance report
+        - Step 5: Ask SynthesisAgent to analyze and combine all results
+          → "SynthesisAgent, please analyze and synthesize the performance results"
+          → Present final comprehensive performance report
+          
+        **Request: "What is VACUUM in PostgreSQL?"**
+        Plan:
+        - Step 1: Ask PedagogicalAgent to explain VACUUM concept
+          → "PedagogicalAgent, please explain what VACUUM is in PostgreSQL"
+          → Agent will provide detailed educational content about VACUUM concept, usage, and best practices
+          
+        **Request: "Performance analysis of my database"**
+        Plan:
+        - Step 1: Ask PerformanceAgent to analyze database performance
+          → "PerformanceAgent, please analyze the database performance and identify bottlenecks"
+          → Agent will use its tools to provide comprehensive performance analysis
+          
+        **Request: "Security audit"**
+        Plan:
+        - Step 1: Ask SecurityAgent to conduct security audit
+          → "SecurityAgent, please perform a comprehensive security audit"
+          → Agent will assess vulnerabilities, user privileges, and provide remediation plan
+          
+        **Request: "Check database maintenance needs"**
+        Plan:
+        - Step 1: Ask MaintenanceAgent to assess maintenance needs
+          → "MaintenanceAgent, please check database maintenance requirements"
+          → Agent will assess maintenance status and provide action recommendations
+          
+        **Request: "Analyze my database schema design"**
+        Plan:
+        - Step 1: Ask SchemaAgent to analyze schema design
+          → "SchemaAgent, please analyze the database schema design and suggest improvements"
+          → Agent will analyze structure and provide optimization recommendations
+          
+        **Request: "Complete database health check"**
+        Plan:
+        - Step 1: Ask PerformanceAgent for performance assessment
+        - Step 2: Ask SecurityAgent for security assessment  
+        - Step 3: Ask MaintenanceAgent for maintenance assessment
+        - Step 4: Ask SchemaAgent for schema assessment
+        - Step 5: Ask SynthesisAgent to combine all assessments
+          → "SynthesisAgent, please synthesize all the assessment results"
+          → Comprehensive multi-agent analysis with expert synthesis
         
         **CRITICAL RULES:**
         - ALWAYS present the plan to user before execution
@@ -250,65 +410,51 @@ def get_coordinator_agent():
         - ALWAYS provide clear status updates
         - ALWAYS handle user "No" responses gracefully
         
-        **IMPORTANT FOR TABLE SIZES:**
-        When getting table sizes, you MUST:
-        1. First call list_database_tables_agent to get all schemas AND tables
-        2. Extract unique schema names from the results
-        3. For EACH schema found, call get_table_sizes_summary_agent(schema_name=schema)
-        4. Present results for each schema individually
-        5. Ask for validation after each schema
-        6. Combine all results in final synthesis
-        
-        **SCHEMA ITERATION WORKFLOW:**
-        - Call list_database_tables_agent to get complete table structure (schemas + tables)
-        - Extract unique schema names from the table list
-        - For each schema: call get_table_sizes_summary_agent(schema_name=schema)
-        - Present: "Schema [name] results: [summary]. Continue to next schema? ✅ Yes / ❌ No"
-        - Collect all schema results for final synthesis
-        
-        **EXAMPLE WORKFLOW:**
-        1. list_database_tables_agent → Returns: analytics_schema: [table1, table2], ecommerce_schema: [table3, table4]
-        2. get_table_sizes_summary_agent(schema_name="analytics_schema") → Returns sizes for table1, table2
-        3. get_table_sizes_summary_agent(schema_name="ecommerce_schema") → Returns sizes for table3, table4
-        4. Combine all results into comprehensive report
+        **TABLE SIZE ANALYSIS WORKFLOW:**
+        1. Call list_database_tables() to get all schemas
+        2. For each schema: get_table_sizes_summary(schema_name=schema)
+        3. Ask SynthesisAgent to combine results
+        4. Always ask for user validation between schemas
         
         **EXECUTION CAPABILITIES:**
         
-        You have access to the following tools:
-        - execute_specialized_agent(agent_name, **kwargs) → Execute specialized agents by delegating to PostgreSQL tools
-        - execute_postgresql_tool(tool_name, **kwargs) → Execute PostgreSQL tools directly
-        - list_available_specialized_agents() → Get list of all available agents
+        You have access to the following capabilities:
+        
+        **Direct Tool Execution:**
+        - Most common tools available directly: list_database_tables(), get_table_sizes_summary(), get_slowest_historical_queries(), etc.
+        - execute_tool(tool_name) → For other PostgreSQL tools without parameters
+        
+        **Sub-Agent Communication:**
+        The coordinator communicates directly with sub-agents through natural language:
+        - "PerformanceAgent, [request]" → Performance analysis and optimization
+        - "SecurityAgent, [request]" → Security auditing and vulnerability assessment
+        - "MaintenanceAgent, [request]" → Database health and maintenance analysis
+        - "SchemaAgent, [request]" → Schema design analysis and optimization
+        
+        Google ADK automatically routes these requests to the appropriate sub-agents.
+        
+        **Tools Registry Functions:**
+        - list_available_tools() → Get list of all available PostgreSQL tools
+        - get_tool_info(tool_name) → Get detailed information about a specific tool and its parameters
         
         **EXECUTION PROCESS:**
-        You can now directly execute specialized agents! Here's how:
         
-        1. **ANALYZE REQUEST:**
-           - Use list_available_specialized_agents() to see what's available
-           - Understand what the user wants
-           - Identify required agents and their parameters
+        1. **ANALYZE** user request and create execution plan
+        2. **EXECUTE** one tool/agent at a time with user validation
+        3. **COORDINATE** sub-agents for specialized analysis
+        4. **SYNTHESIZE** results for comprehensive analysis
         
-        2. **EXECUTE STEP BY STEP:**
-           - Execute ONE agent at a time using execute_specialized_agent()
-           - Present the results of EACH agent clearly
-           - ALWAYS ask for user validation before proceeding to the next agent
-           - Handle errors gracefully and ask for guidance
-        
-        3. **VALIDATION WORKFLOW:**
-           - After each agent execution, show results
-           - Ask: "Results from [agent_name]: [summary]. Continue to next step? ✅ Yes / ❌ No / 🔄 Modify"
-           - Wait for user confirmation before proceeding
-           - If user says No, ask what they want to do instead
-        
-        4. **FINAL SYNTHESIS:**
-           - After all agents complete, combine all results
-           - Present comprehensive analysis
-           - Highlight key findings and recommendations
+        **Key Rules:**
+        - Always present plan before execution
+        - Ask for validation between steps
+        - Use sub-agents for domain expertise
+        - Combine results with SynthesisAgent
         
         **CRITICAL RULES:**
-        - NEVER execute multiple agents without user validation
-        - ALWAYS present each agent's results individually
-        - ALWAYS ask for confirmation before next step
-        - ALWAYS handle user "No" responses gracefully
+        - Execute ONE tool/agent at a time with user validation
+        - Use sub-agents for specialized analysis (PerformanceAgent, SecurityAgent, etc.)
+        - Use SynthesisAgent to combine multiple results
+        - Handle user "No" responses gracefully
         
         **RESPONSE FORMAT:**
         ```
@@ -316,10 +462,10 @@ def get_coordinator_agent():
         
         **Request:** [User request]
         
-        **Recommended Tools:**
-        1. [tool_name] → [Purpose]
-        2. [tool_name] → [Purpose] (depends on Step 1)
-        3. [synthesis_agent] → Combine results
+        **Recommended Approach:**
+        1. Ask [AgentName] to handle specialized analysis → [Purpose]
+        2. Use direct tool calls (e.g., list_database_tables(), get_cache_hit_ratios()) → [Purpose]
+        3. Ask SynthesisAgent to combine results → Comprehensive analysis
         
         **Available Agents:** [List of relevant agents]
         **Required Parameters:** [List of needed parameters]
@@ -330,9 +476,42 @@ def get_coordinator_agent():
         ```
         """,
         tools=[
-            execute_specialized_agent,
-            execute_postgresql_tool,
-            list_available_specialized_agents,
+            # Direct PostgreSQL tool wrappers (complete coverage of tools.yaml)
+            list_database_tables,
+            get_table_sizes_summary,
+            get_slowest_historical_queries,
+            get_most_io_intensive_queries,
+            get_most_frequent_queries,
+            get_blocking_sessions,
+            get_long_running_transactions,
+            get_database_users_and_roles,
+            get_cache_hit_ratios,
+            find_invalid_indexes,
+            list_active_queries,
+            list_installed_extensions,
+            list_available_extensions,
+            get_unused_indexes,
+            get_user_table_permissions,
+            get_current_connections_summary,
+            get_user_role_memberships,
+            get_database_sizes,
+            get_table_maintenance_stats,
+            get_memory_configuration,
+            get_postgresql_version_info,
+            get_replication_status,
+            # Generic tool execution (simplified signature)
+            execute_tool,
+            # Tool discovery functions
+            list_available_tools,
+            get_tool_info,
+        ],
+        sub_agents=[
+            get_performance_agent(),
+            get_security_agent(),
+            get_maintenance_agent(),
+            get_schema_agent(),
+            get_pedagogical_agent(),
+            get_synthesis_agent(),
         ],
     )
 
