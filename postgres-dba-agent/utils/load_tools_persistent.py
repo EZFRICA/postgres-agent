@@ -14,7 +14,6 @@ TOOL_DEFAULTS = {
     "get_most_frequent_queries": {"limit": 10},
     "get_slowest_historical_queries": {"limit": 10},
     "get_most_io_intensive_queries": {"limit": 10},
-    "get_table_sizes_summary": {"schema_name": "public", "limit": 20},
     "get_unused_indexes": {"min_size_mb": 1},
     "get_table_maintenance_stats": {"table_name": None},
     "get_user_role_memberships": {"username": None},
@@ -245,7 +244,6 @@ def load_tools_persistent(toolbox_url: str, toolset_name: str) -> List:
             ],
             "postgres-dba-schema": [
                 "list_database_tables",
-                "get_table_sizes_summary",
                 "find_invalid_indexes",
                 "get_unused_indexes",
                 "get_table_maintenance_stats",
@@ -277,7 +275,6 @@ def load_tools_persistent(toolbox_url: str, toolset_name: str) -> List:
                 "get_most_frequent_queries",
                 "get_blocking_sessions",
                 "get_long_running_transactions",
-                "get_table_sizes_summary",
                 "find_invalid_indexes",
                 "get_unused_indexes",
                 "get_database_users_and_roles",

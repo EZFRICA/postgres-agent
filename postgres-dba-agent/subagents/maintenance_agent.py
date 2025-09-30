@@ -49,11 +49,9 @@ def execute_maintenance_analysis(analysis_type: str = "comprehensive", **kwargs)
         if analysis_type in ["comprehensive", "storage"]:
             # Storage analysis
             results["results"]["database_sizes"] = execute_tool("get_database_sizes")
-            schema_name = kwargs.get("schema_name", "public")
-            limit = kwargs.get("limit", 20)
-            results["results"]["table_sizes"] = execute_tool(
-                "get_table_sizes_summary", schema_name=schema_name, limit=limit
-            )
+            kwargs.get("schema_name", "public")
+            kwargs.get("limit", 20)
+            results["results"]["table_sizes"] = execute_tool("get_database_sizes")
 
         if analysis_type in ["comprehensive", "system"]:
             # System information
@@ -93,9 +91,7 @@ def execute_storage_analysis(schema_name: str = "public", detailed: bool = True)
 
         # Table sizes for specific schema
         if detailed:
-            results["results"]["table_sizes"] = execute_tool(
-                "get_table_sizes_summary", schema_name=schema_name, limit=50
-            )
+            results["results"]["table_sizes"] = execute_tool("get_database_sizes")
 
         return results
 
@@ -130,7 +126,7 @@ def get_maintenance_agent():
         
         **Storage Management:**
         - get_database_sizes → Database size overview for capacity planning
-        - get_table_sizes_summary(schema_name, limit) → Table size analysis
+        - get_database_sizes() → Database size analysis
         
         **System Health:**
         - get_postgresql_version_info → Version and build information

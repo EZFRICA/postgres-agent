@@ -77,7 +77,7 @@ setup_environment()
 
 
 async def run_agent_with_session(
-    message: str, user_id: str = config.DEFAULT_USER_ID, session_id: str = None
+    message: str, user_id: str = config.DEFAULT_USER_ID, session_id: str = ""
 ):
     """
     Execute the coordinator agent with native session management and user interaction.
@@ -92,7 +92,7 @@ async def run_agent_with_session(
     """
     try:
         # Create or retrieve session
-        if session_id is None:
+        if not session_id:
             session = await session_service.create_session(
                 app_name=config.APP_NAME, user_id=user_id
             )

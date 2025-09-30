@@ -66,7 +66,7 @@ def execute_security_audit(audit_type: str = "comprehensive", **kwargs):
         return {"error": error_msg, "status": "failed"}
 
 
-def execute_user_permissions_analysis(username: str, table_name: str = None):
+def execute_user_permissions_analysis(username: str, table_name: str = ""):
     """
     Execute detailed permissions analysis for a specific user.
 

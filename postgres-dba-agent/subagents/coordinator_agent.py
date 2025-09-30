@@ -6,7 +6,7 @@ This agent analyzes user requests and creates execution plans for specialized ag
 from google.adk.agents import LlmAgent
 from ..logging_config import get_logger
 from ..config import settings as config
-from ..utils.load_tools_persistent import load_single_tool
+from ..utils.load_tools_persistent import load_single_tool, load_tools_persistent
 from .pedagogical_agent import get_pedagogical_agent
 from .synthesis_agent import get_synthesis_agent
 from .performance_agent import get_performance_agent
@@ -17,164 +17,169 @@ from .schema_agent import get_schema_agent
 logger = get_logger(__name__)
 
 
-# Lazy-loaded tools cache
+# Pre-loaded tools cache
 _tools_cache = {}
 
 
+def _initialize_tools():
+    """Pre-load all tools at module initialization using load_tools_persistent."""
+    try:
+        # Load all tools using the complete toolset
+        tools = load_tools_persistent(config.TOOLBOX_URL, "postgres-dba-complete")
+
+        # Index tools by name
+        for tool in tools:
+            tool_name = getattr(tool, "__name__", str(tool))
+            _tools_cache[tool_name] = tool
+            logger.info(f"Pre-loaded tool: {tool_name}")
+
+        logger.info(f"Successfully pre-loaded {len(_tools_cache)} tools")
+
+    except Exception as e:
+        logger.warning(f"Failed to pre-load tools via load_tools_persistent: {e}")
+        # Fallback to individual loading
+        tool_names = [
+            "list_database_tables",
+            "get_slowest_historical_queries",
+            "get_most_io_intensive_queries",
+            "get_most_frequent_queries",
+            "get_blocking_sessions",
+            "get_long_running_transactions",
+            "get_database_users_and_roles",
+            "get_cache_hit_ratios",
+            "find_invalid_indexes",
+            "list_active_queries",
+            "list_installed_extensions",
+            "list_available_extensions",
+            "get_unused_indexes",
+            "get_user_table_permissions",
+            "get_current_connections_summary",
+            "get_user_role_memberships",
+            "get_database_sizes",
+            "get_table_maintenance_stats",
+            "get_memory_configuration",
+            "get_postgresql_version_info",
+            "get_replication_status",
+        ]
+
+        for tool_name in tool_names:
+            try:
+                _tools_cache[tool_name] = load_single_tool(
+                    config.TOOLBOX_URL, tool_name
+                )
+                logger.info(f"Fallback loaded tool: {tool_name}")
+            except Exception as fallback_e:
+                logger.warning(f"Failed to load tool {tool_name}: {fallback_e}")
+
+
 def _get_tool(tool_name: str):
-    """Get a tool from cache or load it from MCP toolbox."""
+    """Get a tool from pre-loaded cache."""
     if tool_name not in _tools_cache:
+        # Fallback: try to load if not in cache
         try:
             _tools_cache[tool_name] = load_single_tool(config.TOOLBOX_URL, tool_name)
-            logger.info(f"Loaded tool: {tool_name}")
+            logger.info(f"Fallback loaded tool: {tool_name}")
         except Exception as e:
             logger.error(f"Failed to load tool {tool_name}: {e}")
             raise
     return _tools_cache[tool_name]
 
 
-# Tool wrapper functions using load_tools_persistent
-def list_database_tables(**kwargs):
-    """List all database tables with optional schema and table filtering."""
-    tool = _get_tool("list_database_tables")
-    return tool(**kwargs)
+# Initialize tools at module load
+try:
+    _initialize_tools()
+except Exception as e:
+    logger.warning(f"Tool initialization failed: {e}")
+    logger.warning("Tools will be loaded on-demand")
 
 
-def get_table_sizes_summary(**kwargs):
-    """Get comprehensive table size information for a schema."""
-    tool = _get_tool("get_table_sizes_summary")
-    return tool(**kwargs)
+# Note: Tool wrapper functions removed - using direct load_tools_persistent tools
 
 
-def get_slowest_historical_queries(**kwargs):
-    """Get the slowest queries from query history."""
-    tool = _get_tool("get_slowest_historical_queries")
-    return tool(**kwargs)
+def _create_mock_tools():
+    """Create mock tools for development when MCP Toolbox is not available."""
 
+    def create_mock_tool(tool_name: str, description: str):
+        def mock_tool(**kwargs):
+            return {
+                "status": "mock",
+                "tool": tool_name,
+                "message": f"Mock tool {tool_name} called with {kwargs}",
+                "data": f"This is simulated data from {tool_name}. In production, this would connect to a real PostgreSQL database.",
+                "parameters": kwargs,
+            }
 
-def get_most_io_intensive_queries(**kwargs):
-    """Get the most I/O intensive queries."""
-    tool = _get_tool("get_most_io_intensive_queries")
-    return tool(**kwargs)
+        mock_tool.__name__ = tool_name
+        mock_tool.__doc__ = description
+        return mock_tool
 
+    mock_tools = [
+        create_mock_tool(
+            "list_database_tables",
+            "List all database tables with optional schema and table filtering",
+        ),
+        create_mock_tool(
+            "get_slowest_historical_queries",
+            "Get the slowest queries from query history",
+        ),
+        create_mock_tool(
+            "get_most_io_intensive_queries", "Get the most I/O intensive queries"
+        ),
+        create_mock_tool(
+            "get_most_frequent_queries", "Get the most frequently executed queries"
+        ),
+        create_mock_tool(
+            "get_blocking_sessions", "Find sessions that are blocking other queries"
+        ),
+        create_mock_tool(
+            "get_long_running_transactions", "Find long-running transactions"
+        ),
+        create_mock_tool(
+            "get_database_users_and_roles", "List all database users and their roles"
+        ),
+        create_mock_tool("get_cache_hit_ratios", "Get database cache hit ratios"),
+        create_mock_tool("find_invalid_indexes", "Find invalid or broken indexes"),
+        create_mock_tool(
+            "list_active_queries", "List currently active SQL queries on the database"
+        ),
+        create_mock_tool(
+            "list_installed_extensions",
+            "List all currently installed PostgreSQL extensions",
+        ),
+        create_mock_tool(
+            "list_available_extensions",
+            "List all PostgreSQL extensions available for installation",
+        ),
+        create_mock_tool(
+            "get_unused_indexes", "Identify indexes that are not being used"
+        ),
+        create_mock_tool(
+            "get_user_table_permissions", "Get table permissions for a specific user"
+        ),
+        create_mock_tool(
+            "get_current_connections_summary",
+            "Get summary of current database connections",
+        ),
+        create_mock_tool(
+            "get_user_role_memberships", "Get role memberships for a specific user"
+        ),
+        create_mock_tool("get_database_sizes", "Get sizes of all databases"),
+        create_mock_tool(
+            "get_table_maintenance_stats",
+            "Get maintenance statistics (VACUUM/ANALYZE) for tables",
+        ),
+        create_mock_tool(
+            "get_memory_configuration", "Get PostgreSQL memory configuration parameters"
+        ),
+        create_mock_tool(
+            "get_postgresql_version_info",
+            "Get PostgreSQL version and build information",
+        ),
+        create_mock_tool("get_replication_status", "Get PostgreSQL replication status"),
+    ]
 
-def get_most_frequent_queries(**kwargs):
-    """Get the most frequently executed queries."""
-    tool = _get_tool("get_most_frequent_queries")
-    return tool(**kwargs)
-
-
-def get_blocking_sessions(**kwargs):
-    """Find sessions that are blocking other queries."""
-    tool = _get_tool("get_blocking_sessions")
-    return tool(**kwargs)
-
-
-def get_long_running_transactions(**kwargs):
-    """Find long-running transactions."""
-    tool = _get_tool("get_long_running_transactions")
-    return tool(**kwargs)
-
-
-def get_database_users_and_roles(**kwargs):
-    """List all database users and their roles."""
-    tool = _get_tool("get_database_users_and_roles")
-    return tool(**kwargs)
-
-
-def get_cache_hit_ratios(**kwargs):
-    """Get database cache hit ratios."""
-    tool = _get_tool("get_cache_hit_ratios")
-    return tool(**kwargs)
-
-
-def find_invalid_indexes(**kwargs):
-    """Find invalid or broken indexes."""
-    tool = _get_tool("find_invalid_indexes")
-    return tool(**kwargs)
-
-
-def list_active_queries(**kwargs):
-    """List currently active SQL queries on the database."""
-    tool = _get_tool("list_active_queries")
-    return tool(**kwargs)
-
-
-def list_installed_extensions(**kwargs):
-    """List all currently installed PostgreSQL extensions."""
-    tool = _get_tool("list_installed_extensions")
-    return tool(**kwargs)
-
-
-def list_available_extensions(**kwargs):
-    """List all PostgreSQL extensions available for installation."""
-    tool = _get_tool("list_available_extensions")
-    return tool(**kwargs)
-
-
-def get_unused_indexes(**kwargs):
-    """Identify indexes that are not being used."""
-    tool = _get_tool("get_unused_indexes")
-    return tool(**kwargs)
-
-
-def get_user_table_permissions(**kwargs):
-    """Get table permissions for a specific user."""
-    tool = _get_tool("get_user_table_permissions")
-    return tool(**kwargs)
-
-
-def get_current_connections_summary(**kwargs):
-    """Get summary of current database connections."""
-    tool = _get_tool("get_current_connections_summary")
-    return tool(**kwargs)
-
-
-def get_user_role_memberships(**kwargs):
-    """Get role memberships for a specific user."""
-    tool = _get_tool("get_user_role_memberships")
-    return tool(**kwargs)
-
-
-def get_database_sizes(**kwargs):
-    """Get sizes of all databases."""
-    tool = _get_tool("get_database_sizes")
-    return tool(**kwargs)
-
-
-def get_table_maintenance_stats(**kwargs):
-    """Get maintenance statistics (VACUUM/ANALYZE) for tables."""
-    tool = _get_tool("get_table_maintenance_stats")
-    return tool(**kwargs)
-
-
-def get_memory_configuration(**kwargs):
-    """Get PostgreSQL memory configuration parameters."""
-    tool = _get_tool("get_memory_configuration")
-    return tool(**kwargs)
-
-
-def get_postgresql_version_info(**kwargs):
-    """Get PostgreSQL version and build information."""
-    tool = _get_tool("get_postgresql_version_info")
-    return tool(**kwargs)
-
-
-def get_replication_status(**kwargs):
-    """Get PostgreSQL replication status."""
-    tool = _get_tool("get_replication_status")
-    return tool(**kwargs)
-
-
-# Generic tool execution function - simplified signature for ADK
-def execute_tool(tool_name: str):
-    """Execute any PostgreSQL tool by name without parameters."""
-    try:
-        tool = _get_tool(tool_name)
-        return tool()
-    except Exception as e:
-        logger.error(f"Error executing tool {tool_name}: {e}")
-        return {"error": f"Failed to execute {tool_name}: {str(e)}"}
+    logger.info(f"Created {len(mock_tools)} mock tools for development")
+    return mock_tools
 
 
 # Tool discovery functions
@@ -184,7 +189,6 @@ def list_available_tools():
         # Return list from tools.yaml categories
         tools = [
             "list_database_tables",
-            "get_table_sizes_summary",
             "get_slowest_historical_queries",
             "get_most_io_intensive_queries",
             "get_most_frequent_queries",
@@ -229,6 +233,16 @@ def get_tool_info(tool_name: str):
 def get_coordinator_agent():
     """Create and return the intelligent coordinator agent."""
 
+    # Load tools using load_tools_persistent
+    try:
+        tools_list = load_tools_persistent(config.TOOLBOX_URL, "postgres-dba-complete")
+        logger.info(f"Loaded {len(tools_list)} tools for coordinator")
+    except Exception as e:
+        logger.warning(
+            f"MCP Toolbox not available ({e}), using fallback mock tools for development"
+        )
+        tools_list = _create_mock_tools()
+
     coordinator = LlmAgent(
         name="CoordinatorAgent",
         model=config.COORDINATOR_MODEL,
@@ -248,7 +262,6 @@ def get_coordinator_agent():
         
         **Schema & Structure:**
         - list_database_tables (optional: schema_name, table_name)
-        - get_table_sizes_summary (optional: schema_name, limit - defaults: public, 20)
         - find_invalid_indexes (no parameters)
         - get_unused_indexes (optional: min_size_mb - default: 1)
         - get_table_maintenance_stats (optional: table_name)
@@ -326,8 +339,8 @@ def get_coordinator_agent():
         Plan:
         - Step 1: list_database_tables() → Get complete table structure
           → Present: "Found X schemas with Y tables total. Continue to get sizes? ✅ Yes / ❌ No"
-        - Step 2: For each schema found, get_table_sizes_summary(schema_name=schema)
-          → Present: "Schema [name] sizes: [summary]. Continue to next schema? ✅ Yes / ❌ No"
+        - Step 2: For each schema found, list available table analysis tools
+          → Present: "Schema [name] found. Continue with analysis? ✅ Yes / ❌ No"
         - Step 3: Ask SynthesisAgent to combine all results
           → "SynthesisAgent, please synthesize the table size data from all schemas"
           → Present final comprehensive report with all tables and their sizes
@@ -410,9 +423,9 @@ def get_coordinator_agent():
         - ALWAYS provide clear status updates
         - ALWAYS handle user "No" responses gracefully
         
-        **TABLE SIZE ANALYSIS WORKFLOW:**
+        **TABLE ANALYSIS WORKFLOW:**
         1. Call list_database_tables() to get all schemas
-        2. For each schema: get_table_sizes_summary(schema_name=schema)
+        2. For each schema: Use appropriate analysis tools
         3. Ask SynthesisAgent to combine results
         4. Always ask for user validation between schemas
         
@@ -421,7 +434,7 @@ def get_coordinator_agent():
         You have access to the following capabilities:
         
         **Direct Tool Execution:**
-        - Most common tools available directly: list_database_tables(), get_table_sizes_summary(), get_slowest_historical_queries(), etc.
+        - Most common tools available directly: list_database_tables(), get_slowest_historical_queries(), etc.
         - execute_tool(tool_name) → For other PostgreSQL tools without parameters
         
         **Sub-Agent Communication:**
@@ -475,32 +488,8 @@ def get_coordinator_agent():
         **Next Steps:** [Guidance on how to proceed]
         ```
         """,
-        tools=[
-            # Direct PostgreSQL tool wrappers (complete coverage of tools.yaml)
-            list_database_tables,
-            get_table_sizes_summary,
-            get_slowest_historical_queries,
-            get_most_io_intensive_queries,
-            get_most_frequent_queries,
-            get_blocking_sessions,
-            get_long_running_transactions,
-            get_database_users_and_roles,
-            get_cache_hit_ratios,
-            find_invalid_indexes,
-            list_active_queries,
-            list_installed_extensions,
-            list_available_extensions,
-            get_unused_indexes,
-            get_user_table_permissions,
-            get_current_connections_summary,
-            get_user_role_memberships,
-            get_database_sizes,
-            get_table_maintenance_stats,
-            get_memory_configuration,
-            get_postgresql_version_info,
-            get_replication_status,
-            # Generic tool execution (simplified signature)
-            execute_tool,
+        tools=tools_list
+        + [
             # Tool discovery functions
             list_available_tools,
             get_tool_info,

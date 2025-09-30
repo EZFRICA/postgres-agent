@@ -48,9 +48,9 @@ def execute_schema_analysis(analysis_type: str = "comprehensive", **kwargs):
         if analysis_type in ["comprehensive", "sizes"]:
             # Table size analysis
             schema_name = kwargs.get("schema_name", "public")
-            limit = kwargs.get("limit", 20)
+            kwargs.get("limit", 20)
             results["results"]["table_sizes"] = execute_tool(
-                "get_table_sizes_summary", schema_name=schema_name, limit=limit
+                "list_database_tables", schema_name=schema_name
             )
 
         if analysis_type in ["comprehensive", "indexes"]:
@@ -90,7 +90,7 @@ def execute_schema_design_review(schema_name: str = "public"):
 
         # Get table sizes for the schema
         results["results"]["table_sizes"] = execute_tool(
-            "get_table_sizes_summary", schema_name=schema_name, limit=50
+            "list_database_tables", schema_name=schema_name
         )
 
         # Get index health for the schema
@@ -127,7 +127,7 @@ def get_schema_agent():
         - list_database_tables(schema_name, table_name) → Complete table structure with columns, constraints, indexes, triggers
         
         **Size & Performance:**
-        - get_table_sizes_summary(schema_name, limit) → Table size analysis for capacity and performance planning
+        - list_database_tables(schema_name) → Table analysis for capacity and performance planning
         
         **Index Analysis:**
         - find_invalid_indexes → Corrupted or problematic indexes

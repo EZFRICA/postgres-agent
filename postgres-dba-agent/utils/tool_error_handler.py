@@ -15,7 +15,6 @@ TOOL_DEFAULTS = {
     "get_most_frequent_queries": {"limit": 10},
     "get_slowest_historical_queries": {"limit": 10},
     "get_most_io_intensive_queries": {"limit": 10},
-    "get_table_sizes_summary": {"schema_name": "public", "limit": 20},
     "get_unused_indexes": {"min_size_mb": 1},
     "get_table_maintenance_stats": {"table_name": None},
     "get_user_role_memberships": {"username": None},

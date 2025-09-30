@@ -20,14 +20,6 @@ TOOLS_REGISTRY = {
         "required_params": [],
         "optional_params": ["schema_name", "table_name"],
     },
-    "get_table_sizes_summary": {
-        "category": "schema",
-        "description": "Get comprehensive table size information for a schema",
-        "parameters": ["schema_name", "limit"],
-        "required_params": [],
-        "optional_params": ["schema_name", "limit"],
-        "defaults": {"schema_name": "public", "limit": 20},
-    },
     "find_invalid_indexes": {
         "category": "schema",
         "description": "Find invalid or broken indexes in the database",
