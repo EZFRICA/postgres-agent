@@ -30,8 +30,8 @@ This system provides intelligent database administration through specialized age
 
 This guide assumes you have already done the following:
 
-- **Python 3.9+** (including pip and your preferred virtual environment tool for managing dependencies e.g. venv)
-- **PostgreSQL 16+** and the psql client
+- **Python 3.11+** (including uv and your preferred virtual environment tool for managing dependencies e.g. venv)
+- **PostgreSQL 15+** and the psql client
 - **Google Cloud credentials** (for ADK) - Optional if using Vertex AI
 
 ### Cloud Setup (Optional)
@@ -111,7 +111,7 @@ If you plan to use Google Cloud's Vertex AI with your agent, follow these one-ti
 
 3. **Run the DBA Agent**
    ```bash
-   python postgres-dba-agent/agent.py
+   adk web
    ```
 
 ## 📊 Available Agents
@@ -157,8 +157,8 @@ GOOGLE_CLOUD_PROJECT=your-project-id
 GOOGLE_APPLICATION_CREDENTIALS=path/to/credentials.json
 
 # Agent Configuration
-SPECIALIZED_AGENTS_MODEL=gemini-1.5-pro
-COORDINATOR_MODEL=gemini-1.5-pro
+SPECIALIZED_AGENTS_MODEL=gemini-2.5-flash
+COORDINATOR_MODEL=gemini-2.5-flash
 TOOLBOX_URL=http://localhost:5000
 ```
 
@@ -254,41 +254,7 @@ This covers:
 
 ## 📈 Usage Examples
 
-### Performance Analysis
-```python
-# Analyze slow queries
-result = await performance_agent.analyze_slow_queries()
-
-# Check for missing indexes
-result = await performance_agent.find_missing_indexes()
-
-# Monitor blocking sessions
-result = await performance_agent.get_blocking_sessions()
-```
-
-### Security Auditing
-```python
-# Audit user privileges
-result = await security_agent.audit_user_privileges()
-
-# Check authentication methods
-result = await security_agent.analyze_authentication()
-
-# Review access controls
-result = await security_agent.review_access_controls()
-```
-
-### Maintenance Monitoring
-```python
-# Check table maintenance needs
-result = await maintenance_agent.get_table_maintenance_stats("users")
-
-# Find unused indexes
-result = await maintenance_agent.get_unused_indexes()
-
-# Monitor database size
-result = await maintenance_agent.get_database_sizes()
-```
+- **Scenario Testing**: Use [DBA_AGENT_TEST_SCENARIOS.md](DBA_AGENT_TEST_SCENARIOS.md) for comprehensive validation
 
 ## 🔧 Troubleshooting
 
