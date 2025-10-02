@@ -488,8 +488,7 @@ def get_coordinator_agent():
         **Next Steps:** [Guidance on how to proceed]
         ```
         """,
-        tools=tools_list
-        + [
+        tools=tools_list + [
             # Tool discovery functions
             list_available_tools,
             get_tool_info,
