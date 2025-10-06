@@ -8,7 +8,7 @@ This system provides intelligent database administration through specialized age
 
 ## 🎥 Demo Video
 
-https://github.com/user-attachments/assets/demo_postgres_agent.mp4
+[![Demo Video](https://img.shields.io/badge/▶️-Watch%20Demo-blue?style=for-the-badge)](./demo_postgres_agent.mp4)
 
 *Watch the demo to see the PostgreSQL DBA Multi-Agent System in action, showcasing performance analysis, security auditing, maintenance monitoring, and schema optimization capabilities.*
 
