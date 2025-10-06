@@ -38,6 +38,31 @@ tools:
 
   # === SPECIALIZED DBA TOOLS (not covered by native tools) ===
   
+  # Custom SQL tool for listing all schemas
+  list_all_schemas:
+    kind: postgres-sql
+    source: cloud-sql-pg-source
+    description: "Lists all schemas in the database with their properties and ownership information."
+    statement: |
+      SELECT 
+        nspname as schema_name,
+        pg_get_userbyid(nspowner) as schema_owner,
+        CASE 
+          WHEN nspname IN ('information_schema', 'pg_catalog') 
+          THEN 'system' 
+          ELSE 'user' 
+        END as schema_type
+      FROM pg_namespace
+      WHERE nspname NOT LIKE 'pg_toast%'
+      AND nspname NOT LIKE 'pg_temp%'
+      ORDER BY 
+        CASE 
+          WHEN nspname IN ('information_schema', 'pg_catalog') 
+          THEN 1 
+          ELSE 0 
+        END,
+        nspname;
+  
   get_slowest_historical_queries:
     kind: postgres-sql
     source: cloud-sql-pg-source
@@ -45,7 +70,7 @@ tools:
     parameters:
       - name: limit
         type: integer
-        description: "Number of queries to return. Defaults to 10."
+        description: "Number of queries to return."
     statement: |
       SELECT 
         left(query, 100) AS query_preview,
@@ -55,7 +80,7 @@ tools:
         round((100.0 * total_exec_time / sum(total_exec_time) OVER())::numeric, 2) AS percent_total_time
       FROM pg_stat_statements 
       ORDER BY total_exec_time DESC 
-      LIMIT COALESCE($1, 10);
+      LIMIT $1;
 
   get_most_io_intensive_queries:
     kind: postgres-sql
@@ -64,7 +89,7 @@ tools:
     parameters:
       - name: limit
         type: integer
-        description: "Number of queries to return. Defaults to 10."
+        description: "Number of queries to return."
     statement: |
       SELECT 
         left(query, 100) AS query_preview,
@@ -79,7 +104,7 @@ tools:
       FROM pg_stat_statements 
       WHERE (shared_blks_hit + shared_blks_read) > 0
       ORDER BY shared_blks_read DESC 
-      LIMIT COALESCE($1, 10);
+      LIMIT $1;
 
   get_most_frequent_queries:
     kind: postgres-sql
@@ -88,7 +113,7 @@ tools:
     parameters:
       - name: limit
         type: integer
-        description: "Number of queries to return. Defaults to 10."
+        description: "Number of queries to return."
     statement: |
       SELECT 
         left(query, 100) AS query_preview,
@@ -97,7 +122,7 @@ tools:
         round(mean_exec_time::numeric, 2) AS mean_exec_time_ms
       FROM pg_stat_statements 
       ORDER BY calls DESC 
-      LIMIT COALESCE($1, 10);
+      LIMIT $1;
 
   get_blocking_sessions:
     kind: postgres-sql
@@ -145,28 +170,33 @@ tools:
   get_table_sizes_summary:
     kind: postgres-sql
     source: cloud-sql-pg-source
-    description: "Provides a summary of table sizes sorted by descending size with data/index separation. Complements the native list-tables tool by focusing on capacity aspects."
+    description: "Provides comprehensive table information including sizes, row counts, and types for tables and views in a schema."
     parameters:
       - name: schema_name
         type: string
-        description: "Schema name to analyze. Defaults to 'public'."
+        description: "Schema name to analyze."
       - name: limit
         type: integer
-        description: "Number of tables to return. Defaults to 20."
+        description: "Number of tables to return."
     statement: |
       SELECT 
-        schemaname,
-        tablename,
-        pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
-        pg_size_pretty(pg_relation_size(c.oid)) AS table_size,
-        pg_size_pretty(pg_total_relation_size(c.oid) - pg_relation_size(c.oid)) AS index_size,
-        pg_total_relation_size(c.oid) as size_bytes
-      FROM pg_tables t
-      JOIN pg_class c ON c.relname = t.tablename
-      JOIN pg_namespace n ON n.oid = c.relnamespace AND n.nspname = t.schemaname
-      WHERE schemaname = COALESCE($1, 'public')
-      ORDER BY pg_total_relation_size(c.oid) DESC
-      LIMIT COALESCE($2, 20);
+        t.table_name,
+        t.table_type,
+        COALESCE(s.n_tup_ins + s.n_tup_upd + s.n_tup_del, 0) as row_count,
+        COALESCE(pg_total_relation_size(c.oid), 0) as total_size_bytes,
+        COALESCE(pg_relation_size(c.oid), 0) as table_size_bytes,
+        COALESCE(pg_total_relation_size(c.oid) - pg_relation_size(c.oid), 0) as index_size_bytes,
+        pg_size_pretty(COALESCE(pg_total_relation_size(c.oid), 0)) as total_size_pretty,
+        pg_size_pretty(COALESCE(pg_relation_size(c.oid), 0)) as table_size_pretty,
+        pg_size_pretty(COALESCE(pg_total_relation_size(c.oid) - pg_relation_size(c.oid), 0)) as index_size_pretty
+      FROM information_schema.tables t
+      LEFT JOIN pg_namespace n ON n.nspname = t.table_schema
+      LEFT JOIN pg_class c ON c.relname = t.table_name AND c.relnamespace = n.oid
+      LEFT JOIN pg_stat_user_tables s ON s.relname = t.table_name AND s.schemaname = t.table_schema
+      WHERE t.table_schema = $1
+      AND t.table_type IN ('BASE TABLE', 'VIEW')
+      ORDER BY COALESCE(pg_total_relation_size(c.oid), 0) DESC, t.table_name
+      LIMIT $2;
 
   find_invalid_indexes:
     kind: postgres-sql
@@ -193,7 +223,7 @@ tools:
     parameters:
       - name: min_size_mb
         type: integer
-        description: "Minimum size in MB to consider an index. Defaults to 1 MB."
+        description: "Minimum size in MB to consider an index."
     statement: |
       SELECT 
         schemaname,
@@ -204,7 +234,7 @@ tools:
         pg_size_pretty(pg_relation_size(indexrelid)) AS index_size,
         pg_relation_size(indexrelid) as size_bytes
       FROM pg_stat_user_indexes 
-      WHERE pg_relation_size(indexrelid) > (COALESCE($1, 1) * 1024 * 1024)
+      WHERE pg_relation_size(indexrelid) > ($1 * 1024 * 1024)
         AND idx_tup_read < 1000
         AND idx_tup_fetch < 1000
       ORDER BY pg_relation_size(indexrelid) DESC;
@@ -230,22 +260,41 @@ tools:
   get_user_table_permissions:
     kind: postgres-sql
     source: cloud-sql-pg-source
-    description: "Shows specific permissions for a user on a given table. Useful for diagnosing access issues and verifying permissions."
+    description: "Shows specific permissions for a user on a given table in a specific schema. Useful for diagnosing access issues and verifying permissions. Includes both direct permissions and permissions inherited through roles."
     parameters:
+      - name: schema_name
+        type: string
+        description: "Schema name (e.g., 'public', 'ecommerce_schema')."
       - name: table_name
         type: string
-        description: "Table name to check."
+        description: "Table name to check (e.g., 'orders', 'users')."
       - name: username
         type: string
-        description: "Username/role to check."
+        description: "Username/role to check (e.g., 'postgres', 'app_user')."
     statement: |
       SELECT 
         grantee,
+        table_schema,
+        table_name,
         privilege_type,
-        is_grantable
+        is_grantable,
+        CASE 
+          WHEN grantee = $3 THEN 'Direct'
+          ELSE 'Via Role: ' || grantee
+        END as permission_source
       FROM information_schema.role_table_grants 
-      WHERE table_name = $1 
-        AND grantee = $2;
+      WHERE table_schema = $1
+        AND table_name = $2
+        AND (
+          grantee = $3
+          OR grantee IN (
+            SELECT r.rolname
+            FROM pg_roles r
+            WHERE pg_has_role($3, r.oid, 'member')
+              AND r.rolname != $3
+          )
+        )
+      ORDER BY permission_source, privilege_type;
 
   get_current_connections_summary:
     kind: postgres-sql
@@ -300,12 +349,14 @@ tools:
   get_table_maintenance_stats:
     kind: postgres-sql
     source: cloud-sql-pg-source
-    description: "Shows maintenance statistics (VACUUM/ANALYZE) for all tables or a specific table. Critical for diagnosing performance issues related to bloat and stale statistics."
+    description: "Shows maintenance statistics (VACUUM/ANALYZE) for a specific table in a specific schema. Critical for diagnosing performance issues related to bloat and stale statistics."
     parameters:
+      - name: schema_name
+        type: string
+        description: "Schema name (e.g., 'public', 'ecommerce_schema')."
       - name: table_name
         type: string
-        description: "Table name to analyze. Leave empty for all tables."
-        required: false
+        description: "Table name to analyze (e.g., 'orders', 'users')."
     statement: |
       SELECT 
         schemaname,
@@ -328,10 +379,8 @@ tools:
           ELSE 0 
         END AS dead_tuple_ratio_percent
       FROM pg_stat_user_tables 
-      WHERE (COALESCE($1, '') = '' 
-             OR relname = $1 
-             OR $1 LIKE '%.%' AND (schemaname || '.' || relname) = $1
-             OR $1 LIKE '%.%' AND relname = split_part($1, '.', 2))
+      WHERE schemaname = $1
+        AND relname = $2
       ORDER BY n_dead_tup DESC;
 
   get_memory_configuration:
@@ -414,6 +463,7 @@ toolsets:
     - list_installed_extensions
     - list_available_extensions
     # Specialized DBA tools
+    - list_all_schemas
     - get_slowest_historical_queries
     - get_most_io_intensive_queries
     - get_most_frequent_queries

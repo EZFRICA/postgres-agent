@@ -6,6 +6,12 @@ A multi-agent system built with Google's Agent Development Kit (ADK) for compreh
 
 This system provides intelligent database administration through specialized agents that can analyze performance, security, maintenance, and schema issues in PostgreSQL databases. Each agent is designed to handle specific aspects of database management, working together to provide comprehensive insights and recommendations.
 
+## 🎥 Demo Video
+
+https://github.com/user-attachments/assets/demo_postgres_agent.mp4
+
+*Watch the demo to see the PostgreSQL DBA Multi-Agent System in action, showcasing performance analysis, security auditing, maintenance monitoring, and schema optimization capabilities.*
+
 ## 🏗️ Architecture
 
 ### Core Components
@@ -258,6 +264,8 @@ This covers:
 
 ## 🔧 Troubleshooting
 
+> **📋 Quick Setup**: For immediate help with "Function not found in tools_dict" errors, see [QUICK_SETUP.md](QUICK_SETUP.md)
+
 ### MCP Toolbox Issues
 
 1. **Toolbox Connection Errors**
@@ -265,6 +273,7 @@ This covers:
    - Check `TOOLBOX_URL` in configuration
    - Ensure tools.yaml file is properly formatted
    - Review toolbox logs for errors
+   - **Cold Start Issues**: Use automatic retry mechanism (built-in)
 
 2. **Tool Execution Errors**
    - Verify database credentials in tools.yaml (IAM-based authentication)

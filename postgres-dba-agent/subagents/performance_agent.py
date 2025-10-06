@@ -6,67 +6,9 @@ This agent identifies and analyzes performance bottlenecks, slow queries, and op
 from google.adk.agents import LlmAgent
 from ..logging_config import get_logger
 from ..config import settings as config
-from .tools_registry import execute_tool
+from .tools_registry import execute_performance_analysis
 
 logger = get_logger(__name__)
-
-
-def execute_performance_analysis(analysis_type: str = "comprehensive", **kwargs):
-    """
-    Execute performance analysis using multiple performance tools.
-
-    Args:
-        analysis_type: Type of analysis ("comprehensive", "queries", "blocking", "cache", "memory")
-        **kwargs: Additional parameters for specific tools
-
-    Returns:
-        Combined performance analysis results
-    """
-    try:
-        logger.info(f"Executing performance analysis: {analysis_type}")
-
-        results = {"analysis_type": analysis_type, "status": "success", "results": {}}
-
-        if analysis_type in ["comprehensive", "queries"]:
-            # Query performance analysis
-            results["results"]["active_queries"] = execute_tool("list_active_queries")
-            results["results"]["slowest_queries"] = execute_tool(
-                "get_slowest_historical_queries", limit=kwargs.get("limit", 10)
-            )
-            results["results"]["io_intensive_queries"] = execute_tool(
-                "get_most_io_intensive_queries", limit=kwargs.get("limit", 10)
-            )
-            results["results"]["frequent_queries"] = execute_tool(
-                "get_most_frequent_queries", limit=kwargs.get("limit", 10)
-            )
-
-        if analysis_type in ["comprehensive", "blocking"]:
-            # Blocking and contention analysis
-            results["results"]["blocking_sessions"] = execute_tool(
-                "get_blocking_sessions"
-            )
-            results["results"]["long_running_transactions"] = execute_tool(
-                "get_long_running_transactions"
-            )
-
-        if analysis_type in ["comprehensive", "cache"]:
-            # Cache performance analysis
-            results["results"]["cache_hit_ratios"] = execute_tool(
-                "get_cache_hit_ratios"
-            )
-
-        if analysis_type in ["comprehensive", "memory"]:
-            # Memory configuration analysis
-            results["results"]["memory_configuration"] = execute_tool(
-                "get_memory_configuration"
-            )
-
-        return results
-
-    except Exception as e:
-        error_msg = f"Error executing performance analysis: {str(e)}"
-        logger.error(error_msg)
-        return {"error": error_msg, "status": "failed"}
 
 
 def get_performance_agent():
@@ -78,6 +20,19 @@ def get_performance_agent():
         instruction="""
         You are a PostgreSQL performance specialist focused on identifying and analyzing performance bottlenecks.
         
+        You have access to the execute_performance_analysis function for comprehensive performance analysis.
+        
+        When users request performance analysis, you can use the execute_performance_analysis function with parameters like:
+        - analysis_type: "comprehensive", "queries", "blocking", "cache", "memory"
+        - limit: Number of queries to analyze (required for comprehensive and queries analysis)
+        - min_duration: Optional minimum duration for active queries (e.g., "5 minutes")
+        - limit_active: Optional limit for active queries
+        
+        **EXAMPLES:**
+        - "Run a comprehensive performance analysis with limit 10"
+        - "Show me the 5 slowest historical queries"
+        - "Get the 10 most I/O intensive queries"
+        
         **YOUR SPECIALIZATION:**
         - Purpose: Analyze PostgreSQL performance issues and optimization opportunities
         - Focus: Query performance, blocking sessions, cache efficiency, memory usage
@@ -86,10 +41,13 @@ def get_performance_agent():
         **AVAILABLE PERFORMANCE TOOLS:**
         
         **Query Performance Analysis:**
-        - list_active_queries → Current active queries (real-time performance issues)
-        - get_slowest_historical_queries → Historical slow queries (optimization candidates)
-        - get_most_io_intensive_queries → High I/O queries (disk performance issues)
-        - get_most_frequent_queries → Most executed queries (optimization impact)
+        - list_active_queries(min_duration, exclude_application_names, limit) → Current active queries (all params optional)
+          * min_duration: e.g., "5 minutes" (default: "1 minute")
+          * exclude_application_names: CSV list (e.g., "psql,pgAdmin")
+          * limit: max results (default: 50)
+        - get_slowest_historical_queries(limit) → Historical slow queries (optimization candidates)
+        - get_most_io_intensive_queries(limit) → High I/O queries (disk performance issues)
+        - get_most_frequent_queries(limit) → Most executed queries (optimization impact)
         
         **Blocking & Contention Analysis:**
         - get_blocking_sessions → Active blocking sessions (immediate issues)
@@ -168,6 +126,13 @@ def get_performance_agent():
         - ALWAYS estimate impact and effort for recommendations
         - ALWAYS consider both short-term fixes and long-term optimizations
         - FOCUS on high-impact, low-effort improvements first
+        
+        **PARAMETER REQUIREMENTS:**
+        - list_active_queries: Optional parameters (min_duration, exclude_application_names, limit)
+        - ALWAYS require user to specify 'limit' parameter when analyzing historical queries
+        - NEVER use default values for required parameters
+        - Example: "Please specify how many queries to analyze (limit parameter)"
+        - Example: "How many slowest queries should I analyze? Please provide a limit value."
         """,
         tools=[execute_performance_analysis],
     )

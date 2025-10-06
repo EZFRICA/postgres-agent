@@ -3,7 +3,7 @@ PostgreSQL DBA Tools Registry - Central registry for all PostgreSQL tools
 This module provides a centralized way to access and manage PostgreSQL tools.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 from ..logging_config import get_logger
 from ..config import settings as config
 from ..utils.load_tools_persistent import load_single_tool
@@ -132,6 +132,21 @@ TOOLS_REGISTRY = {
         "required_params": [],
         "optional_params": [],
     },
+    "get_table_sizes_summary": {
+        "category": "system",
+        "description": "Get comprehensive table sizes with row counts and types",
+        "parameters": ["schema_name", "limit"],
+        "required_params": [],
+        "optional_params": ["schema_name", "limit"],
+        "defaults": {"schema_name": "public", "limit": 50},
+    },
+    "list_all_schemas": {
+        "category": "system",
+        "description": "List all schemas in the database with their properties",
+        "parameters": [],
+        "required_params": [],
+        "optional_params": [],
+    },
     "get_memory_configuration": {
         "category": "system",
         "description": "Get PostgreSQL memory configuration",
@@ -210,8 +225,16 @@ def execute_tool(tool_name: str, **kwargs) -> Dict:
         else:
             result = tool()
 
-        logger.info(f"Successfully executed tool: {tool_name}")
-        return {"status": "success", "tool_name": tool_name, "result": result}
+        # Ensure result is always a dictionary
+        if isinstance(result, dict):
+            # If it's already a dict, check if it has the expected structure
+            if "status" in result:
+                return result
+            else:
+                return {"status": "success", "tool_name": tool_name, "result": result}
+        else:
+            # If it's not a dict (e.g., string), wrap it
+            return {"status": "success", "tool_name": tool_name, "result": result}
 
     except Exception as e:
         error_msg = f"Error executing tool '{tool_name}': {str(e)}"
@@ -347,3 +370,386 @@ def get_tools_summary() -> Dict:
         summary["tools_by_category"][category_key] = tools_in_category
 
     return summary
+
+
+# =============================================================================
+# ANALYSIS FUNCTIONS - Centralized logic for all analysis operations
+# =============================================================================
+
+def execute_performance_analysis(analysis_type: str = "comprehensive", limit: Optional[int] = None, min_duration: Optional[str] = None, limit_active: Optional[int] = None):
+    """
+    Execute performance analysis using multiple performance tools.
+
+    Args:
+        analysis_type: Type of analysis ("comprehensive", "queries", "blocking", "cache", "memory")
+        limit: Number of queries to analyze (required for comprehensive and queries analysis)
+        min_duration: Optional minimum duration for active queries (e.g., "5 minutes")
+        limit_active: Optional limit for active queries
+
+    Returns:
+        Combined performance analysis results
+    """
+    try:
+        logger.info(f"Executing performance analysis: {analysis_type}")
+
+        results = {"analysis_type": analysis_type, "status": "success", "results": {}}
+
+        if analysis_type in ["comprehensive", "queries"]:
+            # Query performance analysis - use native tool with optional parameters
+            if min_duration or limit_active:
+                params = {}
+                if min_duration:
+                    params["min_duration"] = min_duration
+                if limit_active:
+                    params["limit"] = limit_active
+                results["results"]["active_queries"] = execute_tool("list_active_queries", **params)
+            else:
+                results["results"]["active_queries"] = execute_tool("list_active_queries")
+            
+            # Require limit parameter for historical queries
+            if limit is None:
+                return {
+                    "error": "Parameter 'limit' is required for query analysis tools. Please specify how many queries to analyze.",
+                    "status": "failed",
+                    "required_parameter": "limit",
+                    "suggestion": "Example: limit=10 for top 10 queries"
+                }
+            
+            results["results"]["slowest_queries"] = execute_tool(
+                "get_slowest_historical_queries", limit=limit
+            )
+            results["results"]["io_intensive_queries"] = execute_tool(
+                "get_most_io_intensive_queries", limit=limit
+            )
+            results["results"]["frequent_queries"] = execute_tool(
+                "get_most_frequent_queries", limit=limit
+            )
+
+        if analysis_type in ["comprehensive", "blocking"]:
+            # Blocking and contention analysis
+            results["results"]["blocking_sessions"] = execute_tool(
+                "get_blocking_sessions"
+            )
+            results["results"]["long_running_transactions"] = execute_tool(
+                "get_long_running_transactions"
+            )
+
+        if analysis_type in ["comprehensive", "cache"]:
+            # Cache performance analysis
+            results["results"]["cache_hit_ratios"] = execute_tool(
+                "get_cache_hit_ratios"
+            )
+
+        if analysis_type in ["comprehensive", "memory"]:
+            # Memory configuration analysis
+            results["results"]["memory_configuration"] = execute_tool(
+                "get_memory_configuration"
+            )
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing performance analysis: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
+
+
+def execute_schema_analysis(analysis_type: str = "comprehensive", schema_name: Optional[str] = None, limit: Optional[int] = None, min_size_mb: Optional[int] = None):
+    """
+    Execute schema analysis using multiple schema tools.
+
+    Args:
+        analysis_type: Type of analysis ("comprehensive", "tables", "indexes", "maintenance")
+        schema_name: Schema name to analyze (required for most analysis types)
+        limit: Number of results to return
+        min_size_mb: Minimum size in MB for filtering
+
+    Returns:
+        Combined schema analysis results
+    """
+    try:
+        logger.info(f"Executing schema analysis: {analysis_type}")
+
+        results = {"analysis_type": analysis_type, "status": "success", "results": {}}
+
+        if analysis_type in ["comprehensive", "tables"]:
+            # Table analysis
+            if schema_name is None:
+                return {
+                    "error": "Parameter 'schema_name' is required for table analysis. Please specify which schema to analyze.",
+                    "status": "failed",
+                    "required_parameter": "schema_name",
+                    "suggestion": "Example: schema_name='public' or schema_name='ecommerce_schema'"
+                }
+
+            
+            params = {"schema_name": schema_name}
+            if limit:
+                params["limit"] = limit
+            
+            results["results"]["table_sizes"] = execute_tool("get_table_sizes_summary", **params)
+
+            # List tables in schema
+            results["results"]["tables"] = execute_tool("list_database_tables")
+
+        if analysis_type in ["comprehensive", "indexes"]:
+            # Index analysis
+            results["results"]["invalid_indexes"] = execute_tool("find_invalid_indexes")
+            
+            # Unused indexes
+            params = {}
+            if min_size_mb:
+                params["min_size_mb"] = min_size_mb
+            results["results"]["unused_indexes"] = execute_tool("get_unused_indexes", **params)
+
+        if analysis_type in ["comprehensive", "maintenance"]:
+            # Maintenance analysis
+            if schema_name is None:
+                return {
+                    "error": "Parameter 'schema_name' is required for maintenance analysis. Please specify which schema to analyze.",
+                    "status": "failed",
+                    "required_parameter": "schema_name",
+                    "suggestion": "Example: schema_name='public' or schema_name='ecommerce_schema'"
+                }
+
+            # Get all tables in schema for maintenance stats
+            table_sizes_result = execute_tool("get_table_sizes_summary", schema_name=schema_name, limit=100)
+            if table_sizes_result.get("status") == "success" and "result" in table_sizes_result:
+                tables = table_sizes_result["result"]
+                maintenance_stats = {}
+                
+                # Ensure tables is a list, not a string
+                if isinstance(tables, list):
+                    for table in tables[:limit or 10]:  # Limit to prevent too many calls
+                        if isinstance(table, dict):
+                            table_name = table.get("table_name")
+                            if table_name:
+                                maintenance_result = execute_tool("get_table_maintenance_stats", 
+                                                               schema_name=schema_name, table_name=table_name)
+                                maintenance_stats[table_name] = maintenance_result
+                else:
+                    logger.warning(f"Expected list of tables, got {type(tables)}: {tables}")
+                
+                results["results"]["maintenance_stats"] = maintenance_stats
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing schema analysis: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
+
+
+def execute_schema_design_review(schema_name: str, focus_areas: Optional[List[str]] = None):
+    """
+    Execute comprehensive schema design review.
+
+    Args:
+        schema_name: Schema name to review (required)
+        focus_areas: Optional list of focus areas (normalization, indexing, constraints, performance)
+
+    Returns:
+        Schema design review results
+    """
+    try:
+        logger.info(f"Executing schema design review for schema: {schema_name}")
+
+        if focus_areas is None:
+            focus_areas = ["normalization", "indexing", "constraints", "performance"]
+
+        results = {"schema_name": schema_name, "focus_areas": focus_areas, "status": "success", "results": {}}
+
+        # Table structure analysis
+        results["results"]["table_structure"] = execute_tool("get_table_sizes_summary", schema_name=schema_name, limit=50)
+        results["results"]["tables"] = execute_tool("list_database_tables")
+
+        # Index analysis
+        if "indexing" in focus_areas:
+            results["results"]["invalid_indexes"] = execute_tool("find_invalid_indexes")
+            results["results"]["unused_indexes"] = execute_tool("get_unused_indexes")
+
+        # Maintenance analysis
+        if "performance" in focus_areas:
+            table_sizes_result = execute_tool("get_table_sizes_summary", schema_name=schema_name, limit=20)
+            if table_sizes_result.get("status") == "success" and "result" in table_sizes_result:
+                tables = table_sizes_result["result"]
+                maintenance_stats = {}
+                
+                # Ensure tables is a list, not a string
+                if isinstance(tables, list):
+                    for table in tables:
+                        if isinstance(table, dict):
+                            table_name = table.get("table_name")
+                            if table_name:
+                                maintenance_result = execute_tool("get_table_maintenance_stats", 
+                                                               schema_name=schema_name, table_name=table_name)
+                                maintenance_stats[table_name] = maintenance_result
+                else:
+                    logger.warning(f"Expected list of tables, got {type(tables)}: {tables}")
+                
+                results["results"]["maintenance_stats"] = maintenance_stats
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing schema design review: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
+
+
+def execute_maintenance_analysis(analysis_type: str = "comprehensive", schema_name: Optional[str] = None, limit: Optional[int] = None):
+    """
+    Execute maintenance analysis using multiple maintenance tools.
+
+    Args:
+        analysis_type: Type of analysis ("comprehensive", "stats", "sizes", "extensions")
+        schema_name: Schema name to analyze (required for stats analysis)
+        limit: Number of results to return
+
+    Returns:
+        Combined maintenance analysis results
+    """
+    try:
+        logger.info(f"Executing maintenance analysis: {analysis_type}")
+
+        results = {"analysis_type": analysis_type, "status": "success", "results": {}}
+
+        if analysis_type in ["comprehensive", "stats"]:
+            # Maintenance statistics
+            if schema_name is None:
+                return {
+                    "error": "Parameter 'schema_name' is required for maintenance stats analysis. Please specify which schema to analyze.",
+                    "status": "failed",
+                    "required_parameter": "schema_name",
+                    "suggestion": "Example: schema_name='public' or schema_name='ecommerce_schema'"
+                }
+
+            # Get table sizes first to identify tables for maintenance stats
+            table_sizes_result = execute_tool("get_table_sizes_summary", schema_name=schema_name, limit=limit or 20)
+            results["results"]["table_sizes"] = table_sizes_result
+
+            if table_sizes_result.get("status") == "success" and "result" in table_sizes_result:
+                tables = table_sizes_result["result"]
+                logger.info(f"Table sizes result type: {type(table_sizes_result)}, result type: {type(tables)}")
+                maintenance_stats = {}
+                
+                # Ensure tables is a list, not a string
+                if isinstance(tables, list):
+                    for table in tables:
+                        if isinstance(table, dict):
+                            table_name = table.get("table_name")
+                            if table_name:
+                                maintenance_result = execute_tool("get_table_maintenance_stats", 
+                                                               schema_name=schema_name, table_name=table_name)
+                                maintenance_stats[table_name] = maintenance_result
+                else:
+                    logger.warning(f"Expected list of tables, got {type(tables)}: {tables}")
+                
+                results["results"]["maintenance_stats"] = maintenance_stats
+
+        if analysis_type in ["comprehensive", "sizes"]:
+            # Database and table sizes
+            results["results"]["database_sizes"] = execute_tool("get_database_sizes")
+            
+            if schema_name:
+                results["results"]["schema_table_sizes"] = execute_tool("get_table_sizes_summary", 
+                                                                      schema_name=schema_name, limit=limit)
+
+        if analysis_type in ["comprehensive", "extensions"]:
+            # Extension analysis
+            results["results"]["installed_extensions"] = execute_tool("list_installed_extensions")
+            results["results"]["available_extensions"] = execute_tool("list_available_extensions")
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing maintenance analysis: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
+
+
+def execute_security_audit(analysis_type: str = "comprehensive", username: Optional[str] = None, schema_name: Optional[str] = None, table_name: Optional[str] = None):
+    """
+    Execute security audit using multiple security tools.
+
+    Args:
+        analysis_type: Type of analysis ("comprehensive", "users", "permissions", "connections")
+        username: Username to analyze (required for user-specific analysis)
+        schema_name: Schema name for table-specific analysis
+        table_name: Table name for specific table analysis
+
+    Returns:
+        Combined security audit results
+    """
+    try:
+        logger.info(f"Executing security audit: {analysis_type}")
+
+        results = {"analysis_type": analysis_type, "status": "success", "results": {}}
+
+        if analysis_type in ["comprehensive", "users"]:
+            # User and role analysis
+            results["results"]["users_and_roles"] = execute_tool("get_database_users_and_roles")
+
+            if username:
+                results["results"]["user_role_memberships"] = execute_tool("get_user_role_memberships", username=username)
+
+        if analysis_type in ["comprehensive", "permissions"]:
+            # Permission analysis
+            if username and schema_name and table_name:
+                results["results"]["user_table_permissions"] = execute_tool(
+                    "get_user_table_permissions", 
+                    schema_name=schema_name, 
+                    table_name=table_name, 
+                    username=username
+                )
+            elif username:
+                # Get user role memberships to understand their permissions
+                results["results"]["user_role_memberships"] = execute_tool("get_user_role_memberships", username=username)
+
+        if analysis_type in ["comprehensive", "connections"]:
+            # Connection analysis
+            results["results"]["current_connections"] = execute_tool("get_current_connections_summary")
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing security audit: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
+
+
+def execute_user_permissions_analysis(username: str, schema_name: Optional[str] = None, table_name: Optional[str] = None):
+    """
+    Execute comprehensive user permissions analysis.
+
+    Args:
+        username: Username to analyze (required)
+        schema_name: Optional schema name for table-specific analysis
+        table_name: Optional table name for specific table analysis
+
+    Returns:
+        User permissions analysis results
+    """
+    try:
+        logger.info(f"Executing user permissions analysis for user: {username}")
+
+        results = {"username": username, "status": "success", "results": {}}
+
+        # Get user role memberships
+        results["results"]["role_memberships"] = execute_tool("get_user_role_memberships", username=username)
+
+        # Get table permissions if schema and table are specified
+        if schema_name and table_name:
+            results["results"]["table_permissions"] = execute_tool(
+                "get_user_table_permissions", 
+                schema_name=schema_name, 
+                table_name=table_name, 
+                username=username
+            )
+
+        return results
+
+    except Exception as e:
+        error_msg = f"Error executing user permissions analysis: {str(e)}"
+        logger.error(error_msg)
+        return {"error": error_msg, "status": "failed"}
